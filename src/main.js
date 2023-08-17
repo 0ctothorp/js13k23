@@ -1,7 +1,32 @@
-const canvas = document.querySelector("canvas");
-const ctx = canvas.getContext("2d");
+class Camera {
+  constructor(canvas) {
+    this.canvas = canvas;
+    /** How many pixels is a one unit */
+    this.zoom = 16;
+    /** position of the camera in world units */
+    this.position = { x: 0, y: 0 };
+  }
 
-function getGameState(canvasCtx) {
+  worldToScreen({ x, y }) {
+    const screenCoords = {
+      x: Math.ceil(x * this.zoom + this.canvas.width / 2),
+      y: Math.ceil(y * this.zoom + this.canvas.height / 2),
+    };
+    return screenCoords;
+  }
+
+  isInViewport(position) {
+    const screen = this.worldToScreen(position);
+    return (
+      screen.x >= 0 &&
+      screen.x <= this.canvas.innerWidth &&
+      screen.y >= 0 &&
+      screen.y <= this.canvas.innerHeight
+    );
+  }
+}
+
+function getGameState(canvas) {
   return {
     time: {
       delta: 0,
@@ -9,11 +34,12 @@ function getGameState(canvasCtx) {
     },
     input: new Set(),
     rendering: {
-      ctx: canvasCtx,
+      ctx: canvas.getContext("2d"),
+      camera: new Camera(canvas),
     },
-    logic: {
-      positions: new Map(),
-      entities: new Set(["player", "enemy1"]),
+    entities: {
+      positions: new Map([["player", { x: 0, y: 0 }]]),
+      sizes: new Map([["player", { x: 2, y: 2 }]]),
     },
   };
 }
@@ -40,8 +66,19 @@ function keyboardInput(gameState, key, isPressed) {
 
   if (isPressed) input.add(key);
   else input.delete(key);
+}
 
-  console.log([...input.values()]);
+function draw(gameState) {
+  const { ctx, camera } = gameState.rendering;
+  const { positions, sizes } = gameState.entities;
+  const unit = camera.zoom;
+
+  for (const [key, p] of positions) {
+    ctx.fillStyle = "green";
+    const { x, y } = camera.worldToScreen(p);
+    const size = sizes.get(key);
+    ctx.fillRect(x, y, unit * size.x, unit * size.y);
+  }
 }
 
 function setup(gameState) {
@@ -52,17 +89,31 @@ function setup(gameState) {
   window.addEventListener("keyup", (event) => {
     keyboardInput(gameState, event.code, false);
   });
+
+  return function gameLoop(frameTime) {
+    const deltaTime = getDeltaTime(gameState, frameTime);
+
+    draw(gameState);
+    requestAnimationFrame(gameLoop);
+  };
 }
 
-function draw(gameState) {}
+function startGame() {
+  const canvas = document.querySelector("canvas");
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
 
-function gameLoop(frameTime) {
-  const deltaTime = getDeltaTime(state, frameTime);
+  window.addEventListener(
+    "resize",
+    debounce(() => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    })
+  );
 
-  draw();
+  const state = getGameState(canvas);
+  const gameLoop = setup(state);
   requestAnimationFrame(gameLoop);
 }
 
-const state = getGameState(ctx);
-setup(state);
-requestAnimationFrame(gameLoop);
+startGame();

@@ -13,6 +13,10 @@
         overflow: hidden;
       }
 
+      .dnone {
+        display: none;
+      }
+
       #ui {
         position: fixed;
         top: 0;
@@ -27,15 +31,17 @@
       }
       /* DEBUG-END */
     </style>
-    <script src="./utils.js"></script>
+    <script src="./main.js" type="module"></script>
   </head>
   <body>
-    <canvas></canvas>
+    <img src="./assets/wall.webp" class="dnone" id="sprite-wall" />
+    <img src="./assets/knight.webp" class="dnone" id="sprite-knight" />
+
+    <canvas style="width: 100vw; height: 100vh"></canvas>
     <div id="ui">
       <!-- DEBUG-START -->
       <!-- <div id="fps-meter">0</div> -->
       <!-- DEBUG-END -->
     </div>
-    <script src="./main.js"></script>
   </body>
 </html>

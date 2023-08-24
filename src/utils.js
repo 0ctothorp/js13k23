@@ -1,4 +1,4 @@
-function debounce(fn, time) {
+export function debounce(fn, time) {
   let timeoutId;
   return (...args) => {
     if (timeoutId) clearTimeout(timeoutId);

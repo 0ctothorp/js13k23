@@ -1,57 +1,68 @@
-class Camera {
-  constructor(canvas) {
-    this.canvas = canvas;
-    /** How many pixels is a one unit */
-    this.zoom = 16;
-    /** position of the camera in world units */
-    this.position = { x: 0, y: 0 };
-  }
+import { debounce } from "./utils.js";
+import { WALL_SPRITE_WIDTH } from "./consts.js";
+import { Camera } from "./camera.js";
 
-  worldToScreen({ x, y }) {
-    const screenCoords = {
-      x: Math.ceil(x * this.zoom + this.canvas.width / 2),
-      y: Math.ceil(y * this.zoom + this.canvas.height / 2),
-    };
-    return screenCoords;
-  }
+/** @typedef {{x: number; y: number}} NumVec2 */
 
-  isInViewport(position) {
-    const screen = this.worldToScreen(position);
-    return (
-      screen.x >= 0 &&
-      screen.x <= this.canvas.innerWidth &&
-      screen.y >= 0 &&
-      screen.y <= this.canvas.innerHeight
-    );
-  }
-}
+/** @type {HTMLImageElement} */
+const wallSprite = document.querySelector("#sprite-wall");
+/** @type {HTMLImageElement} */
+const knightSprite = document.querySelector("#sprite-knight");
 
+/**
+ * @param {HTMLCanvasElement} canvas
+ */
 function getGameState(canvas) {
   return {
     time: {
       delta: 0,
-      prevFrameTime: 0,
+      currentFrameTime: 0,
     },
-    input: new Set(),
+    input: {
+      keyboard: new Set(),
+      mouse: { x: 0, y: 0 },
+      clicks: [],
+      mousedown: false,
+    },
     rendering: {
+      canvas,
       ctx: canvas.getContext("2d"),
       camera: new Camera(canvas),
     },
     entities: {
       positions: new Map([["player", { x: 0, y: 0 }]]),
-      sizes: new Map([["player", { x: 2, y: 2 }]]),
+      sprites: new Map([
+        [
+          "player",
+          {
+            type: "img",
+            data: knightSprite,
+            size: { x: WALL_SPRITE_WIDTH, y: WALL_SPRITE_WIDTH },
+          },
+        ],
+        [
+          "wall_",
+          {
+            type: "img",
+            size: { x: WALL_SPRITE_WIDTH, y: WALL_SPRITE_WIDTH },
+            data: wallSprite,
+          },
+        ],
+      ]),
     },
   };
 }
 
-function getDeltaTime(gameState, currentFrameTime) {
-  if (!gameState.time.prevFrameTime) {
-    gameState.time.prevFrameTime = currentFrameTime;
+/** @typedef {ReturnType<typeof getGameState>} GameState */
+
+function setTime(gameState, nextFrameTime) {
+  if (!gameState.time.currentFrameTime) {
+    gameState.time.currentFrameTime = nextFrameTime;
     return 0;
   }
 
-  gameState.time.delta = currentFrameTime - gameState.time.prevFrameTime;
-  gameState.time.prevFrameTime = currentFrameTime;
+  gameState.time.delta = nextFrameTime - gameState.time.currentFrameTime;
+  gameState.time.currentFrameTime = nextFrameTime;
   return gameState.time.delta;
 }
 
@@ -62,46 +73,200 @@ function getDeltaTime(gameState, currentFrameTime) {
  * @param {boolean} isPressed
  */
 function keyboardInput(gameState, key, isPressed) {
-  const { input } = gameState;
+  const { keyboard } = gameState.input;
 
-  if (isPressed) input.add(key);
-  else input.delete(key);
+  if (isPressed) keyboard.add(key);
+  else keyboard.delete(key);
 }
 
-function draw(gameState) {
-  const { ctx, camera } = gameState.rendering;
-  const { positions, sizes } = gameState.entities;
-  const unit = camera.zoom;
+function drawTextDefinedSprite(sprite, position, gameState) {
+  const { rendering } = gameState;
+  const { camera, ctx } = rendering;
 
-  for (const [key, p] of positions) {
-    ctx.fillStyle = "green";
-    const { x, y } = camera.worldToScreen(p);
-    const size = sizes.get(key);
-    ctx.fillRect(x, y, unit * size.x, unit * size.y);
+  const unit = camera.zoom;
+  const { x, y } = camera.worldToScreen(position);
+
+  const size = {
+    x: sprite.data[0].length,
+    y: sprite.data.length,
+  };
+  const startx = x - (size.x * unit) / 2;
+  const starty = y - (size.y * unit) / 2;
+
+  for (let i = 0; i < size.x; i++) {
+    for (let j = 0; j < size.y; j++) {
+      if (sprite.data[j][i] !== " ") {
+        const color = SPRITE_COLORS[sprite.data[j][i]];
+        ctx.fillStyle = color;
+        ctx.fillRect(startx + i * unit, starty + j * unit, unit, unit);
+      }
+    }
   }
 }
 
-function setup(gameState) {
-  window.addEventListener("keydown", (event) => {
-    keyboardInput(gameState, event.code, true);
-  });
+function drawImgDefinedSprite(sprite, position, gameState) {
+  const { rendering } = gameState;
+  const { camera, ctx } = rendering;
 
-  window.addEventListener("keyup", (event) => {
-    keyboardInput(gameState, event.code, false);
-  });
+  const { x, y } = camera.worldToScreen(position);
 
-  return function gameLoop(frameTime) {
-    const deltaTime = getDeltaTime(gameState, frameTime);
+  const startx = x;
+  const starty = y;
 
-    draw(gameState);
-    requestAnimationFrame(gameLoop);
-  };
+  ctx.drawImage(
+    sprite.data,
+    0,
+    0,
+    sprite.data.naturalWidth,
+    sprite.data.naturalHeight,
+    startx,
+    starty,
+    sprite.size.x,
+    sprite.size.y
+  );
 }
 
-function startGame() {
-  const canvas = document.querySelector("canvas");
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+const drawingFunctions = {
+  text: drawTextDefinedSprite,
+  img: drawImgDefinedSprite,
+};
+
+function getSprite(name, gameState) {
+  const { sprites } = gameState.entities;
+  let sprite = sprites.get(name);
+  if (!sprite) {
+    const prefix = name.substring(0, name.indexOf("_") + 1);
+    sprite = sprites.get(prefix);
+    if (!sprite) {
+      throw new Error(`no sprite for ${key}`);
+    }
+  }
+  return sprite;
+}
+
+function drawSprites(gameState) {
+  const { positions } = gameState.entities;
+
+  for (const [key, position] of positions) {
+    const sprite = getSprite(key, gameState);
+
+    const drawFn = drawingFunctions[sprite.type];
+    drawFn(sprite, position, gameState);
+  }
+}
+
+function screenToWorldGrid(position, cellWidth, gameState) {
+  const { camera } = gameState.rendering;
+  const worldPos = camera.screenToWorld(position);
+
+  const alignedInWorld = {
+    x: worldPos.x - (worldPos.x % cellWidth) - (worldPos.x < 0 ? cellWidth : 0), // no idea why i need to do this, but it works ¯\_(ツ)_/¯
+    y: worldPos.y - (worldPos.y % cellWidth) + (worldPos.y > 0 ? cellWidth : 0), // no idea why i need to do this, but it works ¯\_(ツ)_/¯
+  };
+
+  return alignedInWorld;
+}
+
+/**
+ * @param {GameState} gameState
+ */
+function drawWallBuildingSpot(gameState) {
+  const { camera, ctx } = gameState.rendering;
+  const { mouse } = gameState.input;
+  const gridCell = screenToWorldGrid(mouse, camera.gridCellSize, gameState);
+  const screenPos = camera.worldToScreen(gridCell);
+  ctx.fillStyle = "rgba(100, 200, 200, 0.2)";
+  ctx.fillRect(screenPos.x, screenPos.y, WALL_SPRITE_WIDTH, WALL_SPRITE_WIDTH);
+  // DEBUG-START
+  ctx.fillStyle = "white";
+  ctx.font = "12px sans-serif";
+  ctx.fillText(`(${gridCell.x}, ${gridCell.y})`, screenPos.x, screenPos.y);
+  // DEBUG-END
+}
+
+function draw(gameState) {
+  const { ctx, canvas } = gameState.rendering;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawSprites(gameState);
+  // this needs to be last
+  drawWallBuildingSpot(gameState);
+}
+
+const SPEED = 55;
+
+/**
+ * @typedef {{pos: NumVec2; size: NumVec2}} Collider
+ * @param {Collider} a
+ * @param {Collider} b
+ */
+function checkAxisAlignedRectanglesCollision(a, b) {
+  // Two rectangles A and B DO NOT overlap, when:
+  // - A.right < B.left
+  // - and A.bottom > B.top
+  // in cartesian system
+  if (a.pos.x + a.size.x >= b.pos.x || a.pos.y + a.size.y <= b.pos.x)
+    return false;
+
+  // do a check with A and B swapped
+  if (b.pos.x + b.size.x > a.pos.x || b.pos.y + b.size.y < a.pos.x)
+    return false;
+}
+
+/**
+ * @param {GameState} gameState
+ */
+function movement(gameState) {
+  const { input, entities, time } = gameState;
+  const { positions, sprites } = entities;
+  const { keyboard } = input;
+  let xaxis = keyboard.has("KeyA") ? -1 : keyboard.has("KeyD") ? 1 : 0;
+  let yaxis = keyboard.has("KeyW") ? 1 : keyboard.has("KeyS") ? -1 : 0;
+
+  let x = (xaxis * SPEED * time.delta) / 1000,
+    y = (yaxis * SPEED * time.delta) / 1000;
+
+  if (x && y) {
+    x /= 1.41;
+    y /= 1.41;
+  }
+
+  const pos = positions.get("player");
+
+  const tmpx = pos.x + x;
+  const tmpy = pos.y + y;
+
+  const collisions = new Set();
+
+  const wallSpriteSize = sprites.get("wall_").size;
+  // check collisions with walls only
+  [...positions.entries()]
+    .filter(([k]) => k.startsWith("wall_"))
+    .forEach(([name, wallPos]) => {
+      const isColliding = checkAxisAlignedRectanglesCollision(
+        {
+          pos: wallPos,
+          size: wallSpriteSize,
+        },
+        { pos: { x: tmpx, y: tmpy }, size: sprites.get("player").size }
+      );
+      console.log(name, isColliding);
+      if (isColliding) collisions.add(name);
+    });
+
+  // TEMPORARY (DOESN'T WORK...)
+  if (collisions.size > 0) return;
+
+  pos.x += x;
+  pos.y += y;
+}
+
+/**
+ * @param {GameState} gameState
+ */
+function attachEventListeners(gameState) {
+  const { input, rendering } = gameState;
+  const { canvas } = rendering;
+  const { mouse, clicks } = input;
 
   window.addEventListener(
     "resize",
@@ -111,6 +276,97 @@ function startGame() {
     })
   );
 
+  window.onkeydown = (event) => {
+    keyboardInput(gameState, event.code, true);
+  };
+
+  window.onkeyup = (event) => {
+    keyboardInput(gameState, event.code, false);
+  };
+
+  /**
+   * @param {MouseEvent} event
+   */
+  window.onmousemove = (event) => {
+    mouse.x = event.x;
+    mouse.y = event.y;
+  };
+
+  /**
+   * @param {MouseEvent} event
+   */
+  document.onmouseup = (event) => {
+    clicks.push({
+      x: event.x,
+      y: event.y,
+      button: event.button,
+    });
+    input.mousedown = { button: null };
+  };
+
+  document.onmousedown = (event) => {
+    input.mousedown = { button: event.button };
+  };
+
+  document.oncontextmenu = (event) => {
+    // TODO: check on other browsers
+    event.preventDefault();
+  };
+}
+
+/**
+ *
+ * @param {GameState} gameState
+ */
+function building(gameState) {
+  const { input, entities, rendering } = gameState;
+  const { positions } = entities;
+  const { mousedown } = input;
+
+  // const click = input.clicks.pop();
+  // if (!click) return;
+
+  if (mousedown.button === null) return;
+
+  const gridCell = screenToWorldGrid(
+    input.mouse,
+    rendering.camera.gridCellSize,
+    gameState
+  );
+
+  const entity = `wall_${gridCell.x.toFixed()}_${gridCell.y.toFixed()}`;
+
+  // left button
+  if (mousedown.button === 0 && !positions.has(entity)) {
+    positions.set(entity, gridCell);
+  }
+
+  // right button
+  if (mousedown.button === 2) {
+    positions.delete(entity);
+  }
+}
+
+function setup(gameState) {
+  attachEventListeners(gameState);
+
+  gameState.rendering.ctx.imageSmoothingEnabled = false;
+
+  return function gameLoop(frameTime) {
+    setTime(gameState, frameTime);
+
+    movement(gameState);
+    building(gameState);
+    draw(gameState);
+
+    requestAnimationFrame(gameLoop);
+  };
+}
+
+function startGame() {
+  const canvas = document.querySelector("canvas");
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
   const state = getGameState(canvas);
   const gameLoop = setup(state);
   requestAnimationFrame(gameLoop);

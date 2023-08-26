@@ -31,20 +31,24 @@ function getGameState(canvas) {
     },
     entities: {
       positions: new Map([["player", { x: 0, y: 0 }]]),
+      // gdyby tak szukać kolizji binary searchem?
+      // positionsArraySortedX: [{ entity: "player", x: 0, y: 0 }],
+      // positionsArraySortedY: [{ entity: "player", x: 0, y: 0 }],
+      positionsSet: new Set(),
       sprites: new Map([
         [
           "player",
           {
             type: "img",
             data: knightSprite,
-            size: { x: WALL_SPRITE_WIDTH, y: WALL_SPRITE_WIDTH },
+            size: { x: 8, y: 8 },
           },
         ],
         [
           "wall_",
           {
             type: "img",
-            size: { x: WALL_SPRITE_WIDTH, y: WALL_SPRITE_WIDTH },
+            size: { x: 8, y: 8 },
             data: wallSprite,
           },
         ],
@@ -79,36 +83,12 @@ function keyboardInput(gameState, key, isPressed) {
   else keyboard.delete(key);
 }
 
-function drawTextDefinedSprite(sprite, position, gameState) {
+function drawSprite(sprite, position, gameState) {
   const { rendering } = gameState;
   const { camera, ctx } = rendering;
 
+  const { x, y } = camera.worldToScreen(position);
   const unit = camera.zoom;
-  const { x, y } = camera.worldToScreen(position);
-
-  const size = {
-    x: sprite.data[0].length,
-    y: sprite.data.length,
-  };
-  const startx = x - (size.x * unit) / 2;
-  const starty = y - (size.y * unit) / 2;
-
-  for (let i = 0; i < size.x; i++) {
-    for (let j = 0; j < size.y; j++) {
-      if (sprite.data[j][i] !== " ") {
-        const color = SPRITE_COLORS[sprite.data[j][i]];
-        ctx.fillStyle = color;
-        ctx.fillRect(startx + i * unit, starty + j * unit, unit, unit);
-      }
-    }
-  }
-}
-
-function drawImgDefinedSprite(sprite, position, gameState) {
-  const { rendering } = gameState;
-  const { camera, ctx } = rendering;
-
-  const { x, y } = camera.worldToScreen(position);
 
   const startx = x;
   const starty = y;
@@ -121,15 +101,10 @@ function drawImgDefinedSprite(sprite, position, gameState) {
     sprite.data.naturalHeight,
     startx,
     starty,
-    sprite.size.x,
-    sprite.size.y
+    sprite.size.x * unit,
+    sprite.size.y * unit
   );
 }
-
-const drawingFunctions = {
-  text: drawTextDefinedSprite,
-  img: drawImgDefinedSprite,
-};
 
 function getSprite(name, gameState) {
   const { sprites } = gameState.entities;
@@ -149,9 +124,7 @@ function drawSprites(gameState) {
 
   for (const [key, position] of positions) {
     const sprite = getSprite(key, gameState);
-
-    const drawFn = drawingFunctions[sprite.type];
-    drawFn(sprite, position, gameState);
+    drawSprite(sprite, position, gameState);
   }
 }
 
@@ -204,12 +177,14 @@ function checkAxisAlignedRectanglesCollision(a, b) {
   // - A.right < B.left
   // - and A.bottom > B.top
   // in cartesian system
-  if (a.pos.x + a.size.x >= b.pos.x || a.pos.y + a.size.y <= b.pos.x)
+  if (a.pos.x + a.size.x < b.pos.x || a.pos.y - a.size.y > b.pos.y)
     return false;
 
   // do a check with A and B swapped
-  if (b.pos.x + b.size.x > a.pos.x || b.pos.y + b.size.y < a.pos.x)
+  if (b.pos.x + b.size.x < a.pos.x || b.pos.y - b.size.y > a.pos.y)
     return false;
+
+  return true;
 }
 
 /**
@@ -221,6 +196,8 @@ function movement(gameState) {
   const { keyboard } = input;
   let xaxis = keyboard.has("KeyA") ? -1 : keyboard.has("KeyD") ? 1 : 0;
   let yaxis = keyboard.has("KeyW") ? 1 : keyboard.has("KeyS") ? -1 : 0;
+
+  if (!xaxis && !yaxis) return;
 
   let x = (xaxis * SPEED * time.delta) / 1000,
     y = (yaxis * SPEED * time.delta) / 1000;
@@ -235,26 +212,51 @@ function movement(gameState) {
   const tmpx = pos.x + x;
   const tmpy = pos.y + y;
 
-  const collisions = new Set();
+  let isCollidingx = false;
+  let isCollidingy = false;
 
   const wallSpriteSize = sprites.get("wall_").size;
-  // check collisions with walls only
-  [...positions.entries()]
-    .filter(([k]) => k.startsWith("wall_"))
-    .forEach(([name, wallPos]) => {
-      const isColliding = checkAxisAlignedRectanglesCollision(
-        {
-          pos: wallPos,
-          size: wallSpriteSize,
-        },
-        { pos: { x: tmpx, y: tmpy }, size: sprites.get("player").size }
-      );
-      console.log(name, isColliding);
-      if (isColliding) collisions.add(name);
-    });
+  const playerSpriteSize = sprites.get("player").size;
 
-  // TEMPORARY (DOESN'T WORK...)
-  if (collisions.size > 0) return;
+  // check collisions with walls only
+  const wallsPositions = [...positions.entries()].filter(([k]) =>
+    k.startsWith("wall_")
+  );
+
+  for (const [, wallPos] of wallsPositions) {
+    isCollidingx ||= checkAxisAlignedRectanglesCollision(
+      {
+        pos: wallPos,
+        size: wallSpriteSize,
+      },
+      { pos: { x: tmpx, y: pos.y }, size: playerSpriteSize }
+    );
+
+    isCollidingy ||= checkAxisAlignedRectanglesCollision(
+      {
+        pos: wallPos,
+        size: wallSpriteSize,
+      },
+      { pos: { x: pos.x, y: tmpy }, size: playerSpriteSize }
+    );
+
+    if (isCollidingx && isCollidingy) break;
+  }
+
+  // TEMPORARY
+  if (isCollidingx && isCollidingy) {
+    return;
+  }
+
+  if (isCollidingx) {
+    pos.y += y;
+    return;
+  }
+
+  if (isCollidingy) {
+    pos.x += x;
+    return;
+  }
 
   pos.x += x;
   pos.y += y;

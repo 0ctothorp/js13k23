@@ -31,11 +31,6 @@ export class Camera {
 
   isInViewport(position) {
     const screen = this.worldToScreen(position);
-    return (
-      screen.x >= 0 &&
-      screen.x <= this.canvas.width &&
-      screen.y >= 0 &&
-      screen.y <= this.canvas.height
-    );
+    return screen.x >= 0 && screen.x <= this.canvas.width && screen.y >= 0 && screen.y <= this.canvas.height;
   }
 }

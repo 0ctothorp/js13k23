@@ -1,112 +1,10 @@
-import { debounce, vecLen, vecSub, moveTowards, moveAlongDirection } from "./utils.js";
-import {
-  WALL_SPRITE_WIDTH,
-  ENEMY_MOVEMENT_SPEED,
-  TOWER_PROJECTILE_SPEED,
-  PLAYER_SPEED,
-  ENEMY_SPRITE_SIZE,
-} from "./consts.js";
-import { Camera } from "./camera.js";
-
-/** @type {HTMLImageElement} */
-const wallSprite = document.querySelector("#sprite-wall");
-/** @type {HTMLImageElement} */
-const knightSprite = document.querySelector("#sprite-knight");
-/** @type {HTMLImageElement} */
-const enemySprite = document.querySelector("#sprite-enemy");
+import { debounce, vecLen, vecSub, moveAlongDirection } from "./utils.js";
+import { WALL_SPRITE_WIDTH, TOWER_PROJECTILE_SPEED, PLAYER_SPEED, ENEMY_SPRITE_SIZE } from "./consts.js";
+import * as Enemies from "./enemies";
+import { getGameState } from "./gameState.js";
+import { drawSprites } from "./sprites.js";
 
 /** @typedef {import("./utils.js").NumVec2} NumVec2 */
-
-/**
- * @param {HTMLCanvasElement} canvas
- */
-function getGameState(canvas) {
-  return {
-    time: {
-      delta: 0,
-      currentFrameTime: 0,
-    },
-    input: {
-      keyboard: new Set(),
-      mouse: { x: 0, y: 0 },
-      clicks: [],
-      mousedown: false,
-    },
-    rendering: {
-      canvas,
-      ctx: canvas.getContext("2d"),
-      camera: new Camera(canvas),
-    },
-    entities: {
-      positions: new Map([
-        ["enemySpawn", { x: 10, y: 0 }],
-        ["player", { x: 0, y: 0 }],
-        // ["enemy_1", { x: 8 * 10, y: 8 * 9 }],
-        ["tower", { x: 0, y: 0 }],
-      ]),
-      enemyPositions: [
-        { x: 80, y: 72 },
-        { x: -90, y: -82 },
-      ],
-      enemySpawns: [
-        [-100, 100],
-        [100, 100],
-        [-100, -100],
-        [100, -100],
-      ],
-      enemyHp: [100, 100],
-      sprites: new Map([
-        [
-          "player",
-          {
-            type: "img",
-            data: knightSprite,
-            size: { x: 8, y: 8 },
-          },
-        ],
-        [
-          "wall_",
-          {
-            type: "img",
-            size: { x: 8, y: 8 },
-            data: wallSprite,
-          },
-        ],
-        [
-          "enemy_",
-          {
-            type: "img",
-            data: enemySprite,
-            size: { x: 8, y: 8 },
-          },
-        ],
-        [
-          "tower",
-          {
-            type: "img",
-            data: document.querySelector("#sprite-tower"),
-            size: { x: 32, y: 32 },
-          },
-        ],
-      ]),
-      projectiles: {
-        lastShotAt: null,
-        /** @type {{pos: NumVec2; direction: NumVec2[]; active: boolean}[]} */
-        positions: [],
-      },
-      // TODO: implement tower collider
-      // [x, y, w, h]
-      invisibleWalls: [
-        [-8, -8, 16, 8],
-        [8, 8, 8, 16],
-        [-8, 16, 16, 8],
-        [-16, 8, 8, 16],
-      ],
-    },
-  };
-}
-
-/** @typedef {ReturnType<typeof getGameState>} GameState */
 
 function setTime(gameState, nextFrameTime) {
   if (!gameState.time.currentFrameTime) {
@@ -130,61 +28,6 @@ function keyboardInput(gameState, key, isPressed) {
 
   if (isPressed) keyboard.add(key);
   else keyboard.delete(key);
-}
-
-function drawSprite(sprite, position, gameState) {
-  const { rendering } = gameState;
-  const { camera, ctx } = rendering;
-
-  const { x, y } = camera.worldToScreen({
-    x: position.x - sprite.size.x / 2,
-    y: position.y + sprite.size.y / 2,
-  });
-  const unit = camera.zoom;
-
-  ctx.drawImage(
-    sprite.data,
-    0,
-    0,
-    sprite.data.naturalWidth,
-    sprite.data.naturalHeight,
-    x,
-    y,
-    sprite.size.x * unit,
-    sprite.size.y * unit
-  );
-}
-
-function getSprite(name, gameState) {
-  const { sprites } = gameState.entities;
-  let sprite = sprites.get(name);
-  if (!sprite) {
-    const prefix = name.substring(0, name.indexOf("_") + 1);
-    sprite = sprites.get(prefix);
-  }
-  return sprite;
-}
-
-function drawSprites(gameState) {
-  const { positions } = gameState.entities;
-
-  for (const [key, position] of positions) {
-    const sprite = getSprite(key, gameState);
-    if (!sprite) continue;
-    drawSprite(sprite, position, gameState);
-  }
-}
-
-/**
- * @param {GameState} gameState
- */
-function drawEnemies(gameState) {
-  const { enemyPositions } = gameState.entities;
-
-  for (const position of enemyPositions) {
-    const sprite = getSprite("enemy_", gameState);
-    drawSprite(sprite, position, gameState);
-  }
 }
 
 function screenToWorldGrid(position, cellWidth, gameState) {
@@ -310,30 +153,14 @@ function movement(gameState) {
 /**
  * @param {GameState} gameState
  */
-function enemyMovement(gameState) {
-  const { enemyPositions } = gameState.entities;
-  const { delta } = gameState.time;
-
-  for (const p of enemyPositions) {
-    let target = { x: 0, y: 0 };
-    const playerPos = gameState.entities.positions.get("player");
-    const playerDist = vecLen(vecSub(playerPos, p));
-    if (playerDist < 50) target = playerPos;
-
-    moveTowards(p, target, ENEMY_MOVEMENT_SPEED * delta);
-  }
-}
-
-/**
- * @param {GameState} gameState
- */
 function shootTowerProjectile(gameState) {
-  const { projectiles, enemyPositions } = gameState.entities;
+  const { projectiles } = gameState.entities;
   projectiles.lastShotAt = gameState.time.currentFrameTime;
 
   const towerPos = { x: 0, y: 0 };
+  const aliveEnemies = Enemies.getAliveItems(gameState).positions;
   let closestEnemy;
-  for (const p of enemyPositions) {
+  for (const p of aliveEnemies) {
     const dist = vecLen(vecSub(p, towerPos));
     if (!closestEnemy) {
       closestEnemy = { p, dist };
@@ -343,6 +170,8 @@ function shootTowerProjectile(gameState) {
       closestEnemy = { p, dist };
     }
   }
+
+  if (!closestEnemy) return;
 
   const inactive = projectiles.positions.filter((x) => !x.active);
 
@@ -360,8 +189,6 @@ function shootTowerProjectile(gameState) {
       direction: { x: closestEnemy.p.x, y: closestEnemy.p.y },
     });
   }
-
-  console.log({ projectiles: projectiles.positions });
 }
 
 /**
@@ -507,7 +334,7 @@ function building(gameState) {
  * @param {GameState} gameState
  */
 function checkProjectileCollisions(gameState) {
-  const { projectiles, enemyPositions, enemyHp } = gameState.entities;
+  const { projectiles, enemies } = gameState.entities;
 
   const projCollider = {
     pos: null,
@@ -522,17 +349,17 @@ function checkProjectileCollisions(gameState) {
   for (const proj of projectiles.positions.filter((x) => x.active)) {
     projCollider.pos = proj.pos;
     // I'm curious how's for(const [k, v] of array.entries()) performance wise against for(let i = 0...)
-    for (let i = 0; i < enemyPositions.length; i++) {
-      const enemyPos = enemyPositions[i];
+    for (let i = 0; i < enemies.positions.length; i++) {
+      const enemyPos = enemies.positions[i];
       enemyCollider.pos = enemyPos;
       const areColliding = checkAxisAlignedRectanglesCollision(projCollider, enemyCollider);
 
       if (!areColliding) continue;
 
-      enemyHp[i] -= 50;
+      enemies.hps[i] -= 50;
       proj.active = false;
 
-      // document.querySelector("#debug-window .enemies-hp").innerHTML = enemyHp.toString();
+      // document.querySelector("#debug-window .enemies-hp").innerHTML = enemies.hps.toString();
     }
   }
 }
@@ -541,7 +368,7 @@ function draw(gameState) {
   const { ctx, canvas } = gameState.rendering;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawSprites(gameState);
-  drawEnemies(gameState);
+  Enemies.draw(gameState);
   drawTowerProjectiles(gameState);
   // this needs to be last
   drawWallBuildingSpot(gameState);
@@ -562,7 +389,7 @@ function setup(gameState) {
     setTime(gameState, frameTime);
 
     movement(gameState);
-    enemyMovement(gameState);
+    Enemies.update(gameState);
 
     building(gameState);
 

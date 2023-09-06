@@ -1,4 +1,4 @@
-import { WALL_SPRITE_WIDTH } from "./consts.js";
+import { WALL_SPRITE_WIDTH_PX } from "./consts.js";
 
 export class Camera {
   constructor(canvas, zoom = 4) {
@@ -10,7 +10,7 @@ export class Camera {
   }
 
   get gridCellSize() {
-    return WALL_SPRITE_WIDTH / this.zoom;
+    return WALL_SPRITE_WIDTH_PX / this.zoom;
   }
 
   worldToScreen({ x, y }) {

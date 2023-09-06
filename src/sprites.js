@@ -31,12 +31,27 @@ export function drawSprite(sprite, position, gameState) {
   );
 }
 
+/**
+ * @param {import("./gameState").GameState} gameState
+ */
 export function drawSprites(gameState) {
-  const { positions } = gameState.entities;
+  const {
+    entities,
+    rendering: { ctx },
+  } = gameState;
+  const { positions } = entities;
 
   for (const [key, position] of positions) {
     const sprite = getSprite(key, gameState);
     if (!sprite) continue;
-    drawSprite(sprite, position, gameState);
+    if (entities[key]?.isTransparent) {
+      console.log("hello?");
+      ctx.save();
+      ctx.globalAlpha = 0.5;
+      drawSprite(sprite, position, gameState);
+      ctx.restore();
+    } else {
+      drawSprite(sprite, position, gameState);
+    }
   }
 }

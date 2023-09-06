@@ -1,5 +1,6 @@
 import { Camera } from "./camera.js";
-import { EnemiesData } from "./enemies.js";
+import { EnemiesData } from "./enemies/enemies.js";
+import { Collider } from "./utils.js";
 
 /** @typedef {import("./utils.js").NumVec2} NumVec2 */
 
@@ -32,8 +33,9 @@ export function getGameState(canvas) {
     },
     entities: {
       positions: new Map([
-        ["player", { x: 0, y: 0 }],
-        ["tower", { x: 0, y: 0 }],
+        ["player", { x: 20, y: 20 }],
+        ["tower-down", { x: 0, y: -12 }],
+        ["tower-up", { x: 0, y: 12 }],
       ]),
       enemies: new EnemiesData({
         positions: [
@@ -41,21 +43,13 @@ export function getGameState(canvas) {
           { x: -90, y: -82 },
         ],
         spawns: [
-          [-100, 100],
-          [100, 100],
-          [-100, -100],
-          [100, -100],
+          { x: -100, y: 100 },
+          { x: 100, y: 100 },
+          { x: -100, y: -100 },
+          { x: 100, y: -100 },
         ],
       }),
       sprites: new Map([
-        [
-          "player",
-          {
-            type: "img",
-            data: knightSprite,
-            size: { x: 8, y: 8 },
-          },
-        ],
         [
           "wall_",
           {
@@ -73,11 +67,27 @@ export function getGameState(canvas) {
           },
         ],
         [
-          "tower",
+          "tower-down",
           {
             type: "img",
-            data: document.querySelector("#sprite-tower"),
-            size: { x: 32, y: 32 },
+            data: document.querySelector("#sprite-tower-down"),
+            size: { x: 32, y: 24 },
+          },
+        ],
+        [
+          "tower-up",
+          {
+            type: "img",
+            data: document.querySelector("#sprite-tower-up"),
+            size: { x: 32, y: 24 },
+          },
+        ],
+        [
+          "player",
+          {
+            type: "img",
+            data: knightSprite,
+            size: { x: 8, y: 8 },
           },
         ],
       ]),
@@ -86,14 +96,14 @@ export function getGameState(canvas) {
         /** @type {{pos: NumVec2; direction: NumVec2[]; active: boolean}[]} */
         positions: [],
       },
-      // TODO: implement tower collider
-      // [x, y, w, h]
-      invisibleWalls: [
-        [-8, -8, 16, 8],
-        [8, 8, 8, 16],
-        [-8, 16, 16, 8],
-        [-16, 8, 8, 16],
-      ],
+    },
+    colliders: {
+      ["tower-down"]: new Collider(-16, 0, 32, 24),
+    },
+    triggers: {
+      "upper-tower": {
+        collider: new Collider(-16, 24, 32, 24),
+      },
     },
   };
 }

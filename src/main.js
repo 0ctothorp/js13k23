@@ -1,10 +1,18 @@
-import { debounce, vecLen, vecSub, moveAlongDirection } from "./utils.js";
-import { WALL_SPRITE_WIDTH, TOWER_PROJECTILE_SPEED, PLAYER_SPEED, ENEMY_SPRITE_SIZE } from "./consts.js";
-import * as Enemies from "./enemies";
+import { debounce, vecLen, vecSub, moveAlongDirection, Vec2, Collider, set } from "./utils.js";
+import {
+  WALL_SPRITE_WIDTH_PX,
+  TOWER_PROJECTILE_SPEED,
+  PLAYER_SPEED,
+  ENEMY_SPRITE_SIZE,
+  TOWER_PROJECTILE_DAMAGE,
+} from "./consts.js";
+import * as Enemies from "./enemies/enemies.js";
+import * as EnemySpawns from "./enemies/enemySpawns.js";
 import { getGameState } from "./gameState.js";
 import { drawSprites } from "./sprites.js";
+import { checkAxisAlignedRectanglesCollision } from "./collisions.js";
 
-/** @typedef {import("./utils.js").NumVec2} NumVec2 */
+/** @typedef {import("./gameState.js").GameState} GameState */
 
 function setTime(gameState, nextFrameTime) {
   if (!gameState.time.currentFrameTime) {
@@ -30,16 +38,21 @@ function keyboardInput(gameState, key, isPressed) {
   else keyboard.delete(key);
 }
 
+/**
+ * @param {Vec2} position
+ * @param {number} cellWidth
+ * @param {GameState} gameState
+ */
 function screenToWorldGrid(position, cellWidth, gameState) {
   const { camera } = gameState.rendering;
   const worldPos = camera.screenToWorld(position);
 
-  const alignedInWorld = {
-    x: worldPos.x - (worldPos.x % cellWidth) - (worldPos.x < 0 ? cellWidth : 0), // no idea why i need to do this, but it works ¯\_(ツ)_/¯
-    y: worldPos.y - (worldPos.y % cellWidth) + (worldPos.y > 0 ? cellWidth : 0), // no idea why i need to do this, but it works ¯\_(ツ)_/¯
-  };
+  const gridAligned = new Vec2(
+    worldPos.x - (worldPos.x % cellWidth) - (worldPos.x < 0 ? cellWidth : 0), // no idea why i need to do this, but it works ¯\_(ツ)_/¯
+    worldPos.y - (worldPos.y % cellWidth) + (worldPos.y > 0 ? cellWidth : 0) // no idea why i need to do this, but it works ¯\_(ツ)_/¯
+  );
 
-  return alignedInWorld;
+  return gridAligned;
 }
 
 /**
@@ -51,30 +64,16 @@ function drawWallBuildingSpot(gameState) {
   const gridCell = screenToWorldGrid(mouse, camera.gridCellSize, gameState);
   const screenPos = camera.worldToScreen(gridCell);
   ctx.fillStyle = "rgba(100, 200, 200, 0.2)";
-  ctx.fillRect(screenPos.x, screenPos.y, WALL_SPRITE_WIDTH, WALL_SPRITE_WIDTH);
+  ctx.fillRect(screenPos.x, screenPos.y, WALL_SPRITE_WIDTH_PX, WALL_SPRITE_WIDTH_PX);
   // DEBUG-START
   ctx.fillStyle = "white";
   ctx.font = "12px sans-serif";
-  ctx.fillText(`(${gridCell.x}, ${gridCell.y})`, screenPos.x, screenPos.y);
+  ctx.fillText(
+    `(${gridCell.x + camera.gridCellSize / 2}, ${gridCell.y - camera.gridCellSize / 2})`,
+    screenPos.x,
+    screenPos.y
+  );
   // DEBUG-END
-}
-
-/**
- * @typedef {{pos: import("./utils.js").NumVec2; size: import("./utils.js").NumVec2}} Collider
- * @param {Collider} a
- * @param {Collider} b
- */
-function checkAxisAlignedRectanglesCollision(a, b) {
-  // Two rectangles A and B DO NOT overlap, when:
-  // - A.right < B.left
-  // - and A.bottom > B.top
-  // in cartesian system
-  if (a.pos.x + a.size.x < b.pos.x || a.pos.y - a.size.y > b.pos.y) return false;
-
-  // do a check with A and B swapped
-  if (b.pos.x + b.size.x < a.pos.x || b.pos.y - b.size.y > a.pos.y) return false;
-
-  return true;
 }
 
 /**
@@ -97,57 +96,63 @@ function movement(gameState) {
     y /= 1.41;
   }
 
-  const pos = positions.get("player");
+  const posCenter = positions.get("player");
 
-  const tmpx = pos.x + x;
-  const tmpy = pos.y + y;
+  const tmpx = posCenter.x + x;
+  const tmpy = posCenter.y + y;
 
   let isCollidingx = false;
   let isCollidingy = false;
 
   const wallSpriteSize = sprites.get("wall_").size;
+  /** @type {Vec2} */
   const playerSpriteSize = sprites.get("player").size;
+  const psizeHalf = playerSpriteSize.x / 2;
 
   // check collisions with walls only
-  const wallsPositions = [...positions.entries()].filter(([k]) => k.startsWith("wall_"));
+  // TODO: create a collider together with a wall, so we're not allocating new memory for colliders every time a player
+  // moves and there are walls on the map
+  const colliders = [...positions.entries()]
+    .filter(([k]) => k.startsWith("wall_"))
+    .map(([, v]) => new Collider(v.x, v.y, wallSpriteSize.x, wallSpriteSize.y));
+  colliders.push(gameState.colliders["tower-down"]);
 
-  for (const [, wallPos] of wallsPositions) {
-    isCollidingx ||= checkAxisAlignedRectanglesCollision(
-      {
-        pos: wallPos,
-        size: wallSpriteSize,
-      },
-      { pos: { x: tmpx, y: pos.y }, size: playerSpriteSize }
-    );
+  const pcollider = new Collider(tmpx - psizeHalf, posCenter.y + psizeHalf, playerSpriteSize.x, playerSpriteSize.y);
+  for (const collider of colliders) {
+    isCollidingx ||= checkAxisAlignedRectanglesCollision(collider, pcollider);
 
-    isCollidingy ||= checkAxisAlignedRectanglesCollision(
-      {
-        pos: wallPos,
-        size: wallSpriteSize,
-      },
-      { pos: { x: pos.x, y: tmpy }, size: playerSpriteSize }
-    );
+    pcollider.pos.x = posCenter.x - psizeHalf;
+    pcollider.pos.y = tmpy + psizeHalf;
+    isCollidingy ||= checkAxisAlignedRectanglesCollision(collider, pcollider);
 
     if (isCollidingx && isCollidingy) break;
   }
 
-  // TEMPORARY
-  if (isCollidingx && isCollidingy) {
-    return;
-  }
+  // TEMPORARY ???
+  if (isCollidingx && isCollidingy) return;
 
   if (isCollidingx) {
-    pos.y += y;
+    posCenter.y += y;
     return;
   }
 
   if (isCollidingy) {
-    pos.x += x;
+    posCenter.x += x;
     return;
   }
 
-  pos.x += x;
-  pos.y += y;
+  posCenter.x += x;
+  posCenter.y += y;
+
+  // check collision with tower trigger
+  const trigger = gameState.triggers["upper-tower"];
+  const colSize = WALL_SPRITE_WIDTH_PX / gameState.rendering.camera.zoom;
+  const playerCol = new Collider(posCenter.x - psizeHalf, posCenter.y + psizeHalf, colSize, colSize);
+  if (checkAxisAlignedRectanglesCollision(trigger.collider, playerCol)) {
+    set(gameState.entities, "tower-up.isTransparent", true);
+  } else {
+    set(gameState.entities, "tower-up.isTransparent", false);
+  }
 }
 
 /**
@@ -310,12 +315,11 @@ function building(gameState) {
   const { positions } = entities;
   const { mousedown } = input;
 
-  // const click = input.clicks.pop();
-  // if (!click) return;
-
   if (mousedown.button === null) return;
 
   const gridCell = screenToWorldGrid(input.mouse, rendering.camera.gridCellSize, gameState);
+  gridCell.x += rendering.camera.gridCellSize / 2;
+  gridCell.y -= rendering.camera.gridCellSize / 2;
 
   const entity = `wall_${gridCell.x.toFixed()}_${gridCell.y.toFixed()}`;
 
@@ -356,7 +360,7 @@ function checkProjectileCollisions(gameState) {
 
       if (!areColliding) continue;
 
-      enemies.hps[i] -= 50;
+      enemies.hps[i] -= TOWER_PROJECTILE_DAMAGE;
       proj.active = false;
 
       // document.querySelector("#debug-window .enemies-hp").innerHTML = enemies.hps.toString();
@@ -380,16 +384,25 @@ function draw(gameState) {
   // }
 }
 
+/**
+ * @param {import("./gameState.js").GameState} gameState
+ */
 function setup(gameState) {
   attachEventListeners(gameState);
 
   gameState.rendering.ctx.imageSmoothingEnabled = false;
 
+  gameState.entities.enemies.spawns.forEach((s) => {
+    s.active = true;
+  });
+
   return function gameLoop(frameTime) {
     setTime(gameState, frameTime);
 
     movement(gameState);
+
     Enemies.update(gameState);
+    EnemySpawns.update(gameState);
 
     building(gameState);
 
@@ -397,6 +410,23 @@ function setup(gameState) {
     checkProjectileCollisions(gameState);
 
     draw(gameState);
+
+    // debug
+    // {
+    //   const {
+    //     rendering: { ctx, camera },
+    //     entities: { tower },
+    //     triggers,
+    //   } = gameState;
+
+    //   const col = triggers["upper-tower"].collider;
+    //   const towerScr = camera.worldToScreen({
+    //     x: col.pos.x,
+    //     y: col.pos.y,
+    //   });
+    //   ctx.strokeStyle = "red";
+    //   ctx.strokeRect(towerScr.x, towerScr.y, col.size.x * camera.zoom, col.size.y * camera.zoom);
+    // }
 
     requestAnimationFrame(gameLoop);
   };

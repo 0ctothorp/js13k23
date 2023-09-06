@@ -1,4 +1,27 @@
-/** @typedef {{x: number; y: number}} NumVec2 */
+export class Vec2 {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  clone() {
+    return new Vec2(this.x, this.y);
+  }
+}
+
+export class Collider {
+  /**
+   * @param {number} x
+   * @param {number} y
+   * @param {number} w
+   * @param {number} h
+   */
+  constructor(x, y, w, h, isTrigger = false) {
+    this.pos = new Vec2(x, y);
+    this.size = new Vec2(w, h);
+    this.isTrigger = isTrigger;
+  }
+}
 
 export function debounce(fn, time) {
   let timeoutId;
@@ -37,8 +60,7 @@ export function moveTowards(pos, target, speed) {
   const vec = vecSub(target, pos);
   const len = vecLen(vec);
   const moveByVecPercent = speed / len;
-  pos.x = pos.x + moveByVecPercent * vec.x;
-  pos.y = pos.y + moveByVecPercent * vec.y;
+  return new Vec2(pos.x + moveByVecPercent * vec.x, pos.y + moveByVecPercent * vec.y);
 }
 
 /**
@@ -50,4 +72,24 @@ export function moveAlongDirection(pos, target, speed) {
   const dir = vecNorm(target);
   pos.x = pos.x + speed * dir.x;
   pos.y = pos.y + speed * dir.y;
+}
+
+export function set(obj, path, value) {
+  const segments = path.split(".");
+  const lastKey = segments.pop();
+  let beforeLastRef = obj;
+  for (const s of segments) {
+    if (!beforeLastRef[s]) {
+      beforeLastRef[s] = {};
+    }
+    beforeLastRef = beforeLastRef[s];
+  }
+  beforeLastRef[lastKey] = value;
+}
+
+/**
+ * @param {Collider} c
+ */
+export function changeColliderAnchorToTopLeft(c) {
+  return new Collider(c.pos.x - c.size.x / 2, c.pos.y + c.size.y / 2, c.size.x, c.size.y, c.isTrigger);
 }

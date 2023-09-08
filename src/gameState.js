@@ -2,8 +2,6 @@ import { Camera } from "./camera.js";
 import { EnemiesData } from "./enemies/enemies.js";
 import { Collider } from "./utils.js";
 
-/** @typedef {import("./utils.js").NumVec2} NumVec2 */
-
 /** @type {HTMLImageElement} */
 const wallSprite = document.querySelector("#sprite-wall");
 /** @type {HTMLImageElement} */
@@ -38,10 +36,7 @@ export function getGameState(canvas) {
         ["tower-up", { x: 0, y: 12 }],
       ]),
       enemies: new EnemiesData({
-        positions: [
-          { x: 80, y: 72 },
-          { x: -90, y: -82 },
-        ],
+        positions: [],
         spawns: [
           { x: -100, y: 100 },
           { x: 100, y: 100 },

@@ -45,7 +45,6 @@ export function drawSprites(gameState) {
     const sprite = getSprite(key, gameState);
     if (!sprite) continue;
     if (entities[key]?.isTransparent) {
-      console.log("hello?");
       ctx.save();
       ctx.globalAlpha = 0.5;
       drawSprite(sprite, position, gameState);

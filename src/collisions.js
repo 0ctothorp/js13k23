@@ -1,4 +1,5 @@
-import { Vec2, changeColliderAnchorToTopLeft } from "./utils";
+import { ENEMY_SPRITE_SIZE } from "./consts.js";
+import { Collider, Vec2, changeColliderAnchorToTopLeft } from "./utils.js";
 
 /**
  * @param {import('./utils').Collider} a
@@ -18,11 +19,19 @@ export function checkAxisAlignedRectanglesCollision(a, b) {
 }
 
 /**
- * @param {import('./utils').Collider} a
- * @param {import('./utils').Collider} b
+ * @param {Vec2} newPos
+ * @param {Vec2} oldPos
+ * @param {Collider} collider
  */
-export function areCenterAnchoredAxisAlignedRectanglesColliding(a, b) {
-  const newa = changeColliderAnchorToTopLeft(a);
-  const newb = changeColliderAnchorToTopLeft(b);
-  return checkAxisAlignedRectanglesCollision(newa, newb);
+export function isColliding(newPos, oldPos, collider) {
+  const colliderx = changeColliderAnchorToTopLeft(
+    new Collider(newPos.x, oldPos.y, ENEMY_SPRITE_SIZE, ENEMY_SPRITE_SIZE)
+  );
+  const collidery = changeColliderAnchorToTopLeft(
+    new Collider(oldPos.x, newPos.y, ENEMY_SPRITE_SIZE, ENEMY_SPRITE_SIZE)
+  );
+  const collidesx = checkAxisAlignedRectanglesCollision(collider, colliderx);
+  const collidesy = checkAxisAlignedRectanglesCollision(collider, collidery);
+
+  return new Vec2(collidesx, collidesy);
 }

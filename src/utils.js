@@ -7,6 +7,15 @@ export class Vec2 {
   clone() {
     return new Vec2(this.x, this.y);
   }
+
+  /**
+   * @param {number} multiplier
+   */
+  scale(multiplier) {
+    this.x *= multiplier;
+    this.y *= multiplier;
+    return this;
+  }
 }
 
 export class Collider {

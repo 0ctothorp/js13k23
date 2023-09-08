@@ -1,11 +1,11 @@
-import * as enemies from "./enemies";
+import Enemies from "./enemies.js";
 
 /** @typedef {import('../gameState').GameState} GameState */
 
 /**
  * @param {GameState} gameState
  */
-export function update(gameState) {
+function update(gameState) {
   const { spawns } = gameState.entities.enemies;
   const { currentFrameTime } = gameState.time;
 
@@ -13,8 +13,12 @@ export function update(gameState) {
     if (!spawn.active) continue;
 
     if (spawn.lastSpawnAt === undefined || currentFrameTime - spawn.lastSpawnAt >= spawn.interval) {
-      enemies.createNew(gameState, spawn.position);
+      Enemies.createNew(gameState, spawn.position);
       spawn.lastSpawnAt = currentFrameTime;
     }
   }
 }
+
+export default {
+  update,
+};

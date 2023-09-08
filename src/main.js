@@ -1,4 +1,4 @@
-import { debounce, vecLen, vecSub, moveAlongDirection, Vec2, Collider, set } from "./utils.js";
+import { debounce, vecLen, vecSub, moveAlongDirection, Vec2, Collider } from "./utils.js";
 import {
   WALL_SPRITE_WIDTH_PX,
   TOWER_PROJECTILE_SPEED,
@@ -6,11 +6,13 @@ import {
   ENEMY_SPRITE_SIZE,
   TOWER_PROJECTILE_DAMAGE,
 } from "./consts.js";
-import * as Enemies from "./enemies/enemies.js";
-import * as EnemySpawns from "./enemies/enemySpawns.js";
+import Enemies from "./enemies/enemies.js";
+import EnemySpawns from "./enemies/enemySpawns.js";
 import { getGameState } from "./gameState.js";
 import { drawSprites } from "./sprites.js";
 import { checkAxisAlignedRectanglesCollision } from "./collisions.js";
+import Tower from "./tower.js";
+import debug from "./debug.js";
 
 /** @typedef {import("./gameState.js").GameState} GameState */
 
@@ -143,16 +145,6 @@ function movement(gameState) {
 
   posCenter.x += x;
   posCenter.y += y;
-
-  // check collision with tower trigger
-  const trigger = gameState.triggers["upper-tower"];
-  const colSize = WALL_SPRITE_WIDTH_PX / gameState.rendering.camera.zoom;
-  const playerCol = new Collider(posCenter.x - psizeHalf, posCenter.y + psizeHalf, colSize, colSize);
-  if (checkAxisAlignedRectanglesCollision(trigger.collider, playerCol)) {
-    set(gameState.entities, "tower-up.isTransparent", true);
-  } else {
-    set(gameState.entities, "tower-up.isTransparent", false);
-  }
 }
 
 /**
@@ -220,10 +212,11 @@ function tower(gameState) {
     return;
   }
 
-  if (projectiles.lastShotAt + 3000 < gameState.time.currentFrameTime) {
+  if (projectiles.lastShotAt + 2000 < gameState.time.currentFrameTime) {
     shootTowerProjectile(gameState);
   }
 
+  Tower.towerTriggerCollisions(gameState);
   updateTowerProjectiles(gameState);
 }
 
@@ -371,11 +364,13 @@ function checkProjectileCollisions(gameState) {
 function draw(gameState) {
   const { ctx, canvas } = gameState.rendering;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawSprites(gameState);
   Enemies.draw(gameState);
+  drawSprites(gameState);
   drawTowerProjectiles(gameState);
   // this needs to be last
   drawWallBuildingSpot(gameState);
+
+  // debug.drawColliders(gameState);
 
   // show center of the screen
   // {
@@ -396,6 +391,8 @@ function setup(gameState) {
     s.active = true;
   });
 
+  const observeEnemiesPool = debug.getOserveEnemyPool(gameState);
+
   return function gameLoop(frameTime) {
     setTime(gameState, frameTime);
 
@@ -410,6 +407,9 @@ function setup(gameState) {
     checkProjectileCollisions(gameState);
 
     draw(gameState);
+
+    // debug
+    observeEnemiesPool();
 
     // debug
     // {

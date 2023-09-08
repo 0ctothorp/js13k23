@@ -1,12 +1,13 @@
-import { ENEMY_MOVEMENT_SPEED, ENEMY_SPRITE_SIZE } from "../consts";
-import { Collider, Vec2, changeColliderAnchorToTopLeft, moveTowards, vecLen, vecSub } from "../utils";
-import { getSprite, drawSprite } from "../sprites";
-import { EnemySpawnData } from "./EnemySpawnData";
-import { checkAxisAlignedRectanglesCollision } from "../collisions.js";
+import { ENEMY_MOVEMENT_SPEED, ENEMY_SPRITE_SIZE } from "../consts.js";
+import { Collider, Vec2, changeColliderAnchorToTopLeft, moveTowards, vecLen, vecSub } from "../utils.js";
+import { getSprite, drawSprite } from "../sprites.js";
+import { EnemySpawnData } from "./EnemySpawnData.js";
+import { checkAxisAlignedRectanglesCollision, isColliding } from "../collisions.js";
 
 /** @typedef {import('../gameState').GameState} GameState */
 
-export class EnemiesData {
+class EnemiesData {
+  /** @type {Array<number>} */
   hps = [];
 
   /**
@@ -22,59 +23,64 @@ export class EnemiesData {
 /**
  * @param {GameState} gameState
  * @param {Vec2} position
+ * @param {Vec2} oldPos
  */
-function isCollidingWithTower(gameState, position) {
-  const collider = gameState.colliders["tower-down"];
+function isCollidingWithTower(gameState, position, oldPos) {
+  const towerCollider = gameState.colliders["tower-down"];
+  return isColliding(position, oldPos, towerCollider);
+}
 
-  if (
-    checkAxisAlignedRectanglesCollision(
-      collider,
-      changeColliderAnchorToTopLeft(new Collider(position.x, position.y, ENEMY_SPRITE_SIZE, ENEMY_SPRITE_SIZE))
-    )
-  ) {
-    return true;
-  }
-
-  return false;
+/**
+ * @param {Vec2} oldPosRef
+ * @param {Vec2} newPos
+ * @param {Vec2} collision
+ */
+function updatePositionAfterCollision(oldPosRef, newPos, collision) {
+  if (!collision.x) oldPosRef.x = newPos.x;
+  if (!collision.y) oldPosRef.y = newPos.y;
 }
 
 /**
  * @param {GameState} gameState
  */
-export function update(gameState) {
-  const { positions } = gameState.entities.enemies;
+function update(gameState) {
+  const { positions, hps } = gameState.entities.enemies;
   const { delta } = gameState.time;
 
   for (const [idx, p] of positions.entries()) {
+    if (hps[idx] <= 0) continue;
+
     let target = { x: 0, y: 0 };
     const playerPos = gameState.entities.positions.get("player");
     const playerDist = vecLen(vecSub(playerPos, p));
     if (playerDist < 50) target = playerPos;
-
     const newPos = moveTowards(p, target, ENEMY_MOVEMENT_SPEED * delta);
 
-    // TODO: check if current target is a tower and if not let the enemy slide along the tower collider, or
-    // implement some sort of path finding to the player.
-    if (isCollidingWithTower(gameState, newPos)) {
-      continue;
-    }
+    const colliding = isCollidingWithTower(gameState, newPos, p);
+    // updatePositionAfterCollision(positions[idx], newPos, colliding);
 
-    positions[idx] = newPos;
+    for (const [otherIdx, e] of positions.entries()) {
+      if (idx == otherIdx) continue;
+      const collider = changeColliderAnchorToTopLeft(new Collider(e.x, e.y, ENEMY_SPRITE_SIZE, ENEMY_SPRITE_SIZE));
+      const otherEnemyCollision = isColliding(newPos, p, collider);
+      colliding.x = otherEnemyCollision.x || colliding.x;
+      colliding.y = otherEnemyCollision.y || colliding.y;
+      if (colliding.x && colliding.y) break;
+    }
+    updatePositionAfterCollision(p, newPos, colliding);
   }
 }
 
 /**
  * @param {GameState} gameState
  */
-export function draw(gameState) {
+function draw(gameState) {
   const { enemies } = gameState.entities;
   const { hps } = enemies;
   const { camera, ctx } = gameState.rendering;
 
   const sEnemySize = ENEMY_SPRITE_SIZE * camera.zoom;
   const hpBarHeight = 6;
-
-  //   const alive = getAliveItems(gameState);
 
   for (const [idx, position] of enemies.positions.entries()) {
     if (hps[idx] <= 0) continue;
@@ -95,11 +101,11 @@ export function draw(gameState) {
 /**
  * @param {GameState} gameState
  */
-export function getAliveItems(gameState) {
+function getAliveItems(gameState) {
   const { enemies } = gameState.entities;
   return {
     positions: enemies.positions.filter((_, idx) => enemies.hps[idx] > 0),
-    hps: enemies.hps,
+    hps: enemies.hps.filter((hp) => hp > 0),
   };
 }
 
@@ -107,9 +113,23 @@ export function getAliveItems(gameState) {
  * @param {GameState} gameState
  * @param {Vec2} position
  */
-export function createNew(gameState, position) {
+function createNew(gameState, position) {
   const { enemies } = gameState.entities;
   const idx = enemies.hps.indexOf(0);
+  if (idx === -1) {
+    enemies.positions.push(position.clone());
+    enemies.hps.push(100);
+    return;
+  }
   enemies.hps[idx] = 100;
   enemies.positions[idx] = position.clone();
 }
+
+export default {
+  draw,
+  getAliveItems,
+  createNew,
+  update,
+};
+
+export { EnemiesData };

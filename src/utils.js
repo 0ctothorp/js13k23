@@ -16,6 +16,40 @@ export class Vec2 {
     this.y *= multiplier;
     return this;
   }
+
+  normalize() {
+    const len = vecLen(this);
+    this.x /= len;
+    this.y /= len;
+    return this;
+  }
+
+  /**
+   * @param {Vec2} v
+   */
+  sub(v) {
+    this.x -= v.x;
+    this.y -= v.y;
+    return this;
+  }
+
+  /** @param {Vec2} v  */
+  dotProduct(v) {
+    return this.x * v.x + this.y * v.y;
+  }
+
+  get length() {
+    return Math.sqrt(this.x * this.x + this.y * this.y);
+  }
+}
+
+/**
+ * @param {Vec2} a
+ * @param {Vec2} b
+ * @returns
+ */
+export function angleBetweenVectors(a, b) {
+  return Math.acos(a.dotProduct(b) / (a.length * b.length));
 }
 
 export class Collider {
@@ -73,8 +107,8 @@ export function moveTowards(pos, target, speed) {
 }
 
 /**
- * @param {NumVec2} pos - this param is mutated
- * @param {NumVec2} target
+ * @param {Vec2} pos - this param is mutated
+ * @param {Vec2} target
  * @param {number} speed
  */
 export function moveAlongDirection(pos, target, speed) {

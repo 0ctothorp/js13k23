@@ -1,6 +1,7 @@
 import { Camera } from "./camera.js";
+import { ENEMY_SPRITE_SIZE } from "./consts.js";
 import { EnemiesData } from "./enemies/enemies.js";
-import { Collider } from "./utils.js";
+import { Collider, Vec2 } from "./utils.js";
 
 /** @type {HTMLImageElement} */
 const wallSprite = document.querySelector("#sprite-wall");
@@ -19,10 +20,13 @@ export function getGameState(canvas) {
       currentFrameTime: 0,
     },
     input: {
-      keyboard: new Set(),
+      currentlyPressed: new Set(),
+      /** @type {Map<string, {time: number}>} */
+      wasPressedAt: new Map(),
       mouse: { x: 0, y: 0 },
       clicks: [],
-      mousedown: false,
+      /** @type {{button: number | null}} */
+      mousedown: { button: null },
     },
     rendering: {
       canvas,
@@ -31,9 +35,9 @@ export function getGameState(canvas) {
     },
     entities: {
       positions: new Map([
-        ["player", { x: 20, y: 20 }],
-        ["tower-down", { x: 0, y: -12 }],
-        ["tower-up", { x: 0, y: 12 }],
+        ["player", new Vec2(20, 20)],
+        ["tower-down", new Vec2(0, -12)],
+        ["tower-up", new Vec2(0, 12)],
       ]),
       enemies: new EnemiesData({
         positions: [],
@@ -44,11 +48,13 @@ export function getGameState(canvas) {
           { x: 100, y: -100 },
         ],
       }),
+      directions: new Map([["player", new Vec2(0, 0)]]),
+      /** @type {Map<string, { startedAt: number; direction: Vec2; position: Vec2 }>} */
+      performingAttack: new Map(),
       sprites: new Map([
         [
           "wall_",
           {
-            type: "img",
             size: { x: 8, y: 8 },
             data: wallSprite,
           },
@@ -56,15 +62,13 @@ export function getGameState(canvas) {
         [
           "enemy_",
           {
-            type: "img",
             data: enemySprite,
-            size: { x: 8, y: 8 },
+            size: { x: ENEMY_SPRITE_SIZE, y: ENEMY_SPRITE_SIZE },
           },
         ],
         [
           "tower-down",
           {
-            type: "img",
             data: document.querySelector("#sprite-tower-down"),
             size: { x: 32, y: 24 },
           },
@@ -72,7 +76,6 @@ export function getGameState(canvas) {
         [
           "tower-up",
           {
-            type: "img",
             data: document.querySelector("#sprite-tower-up"),
             size: { x: 32, y: 24 },
           },
@@ -80,15 +83,21 @@ export function getGameState(canvas) {
         [
           "player",
           {
-            type: "img",
             data: knightSprite,
-            size: { x: 8, y: 8 },
+            size: { x: ENEMY_SPRITE_SIZE, y: ENEMY_SPRITE_SIZE },
+          },
+        ],
+        [
+          "slash",
+          {
+            data: document.querySelector("#sprite-slash"),
+            size: { x: ENEMY_SPRITE_SIZE, y: ENEMY_SPRITE_SIZE },
           },
         ],
       ]),
       projectiles: {
         lastShotAt: null,
-        /** @type {{pos: NumVec2; direction: NumVec2[]; active: boolean}[]} */
+        /** @type {{pos: Vec2; direction: Vec2[]; active: boolean}[]} */
         positions: [],
       },
     },

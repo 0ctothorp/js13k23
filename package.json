@@ -4,15 +4,14 @@
   "description": "",
   "scripts": {
     "start": "serve ./src",
-    "build": "echo dupa"
+    "build": "parcel build src/index.html && ./zip.ps1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "typescript": "^5.2.2"
-  },
-  "dependencies": {
+    "typescript": "^5.2.2",
+    "parcel": "^2.9.3",
     "serve": "^14.2.1"
   }
 }

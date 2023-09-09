@@ -7,6 +7,7 @@ import { drawSprites } from "./sprites.js";
 import debug from "./debug.js";
 import player from "./player.js";
 import tower from "./tower.js";
+import slash from "./slash.js";
 
 /** @typedef {import("./gameState.js").GameState} GameState */
 
@@ -161,8 +162,6 @@ function draw(gameState) {
   drawSprites(gameState);
   tower.draw(gameState);
   player.draw(gameState);
-  // this needs to be last
-  // drawWallBuildingSpot(gameState);
 
   // debug.drawColliders(gameState);
 
@@ -195,8 +194,8 @@ function setup(gameState) {
     Enemies.update(gameState);
     EnemySpawns.update(gameState);
 
-    // building(gameState);
     tower.update(gameState);
+    slash.update(gameState);
 
     draw(gameState);
 

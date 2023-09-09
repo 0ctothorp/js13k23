@@ -40,7 +40,6 @@ export function getGameState(canvas) {
         ["tower-up", new Vec2(0, 12)],
       ]),
       enemies: new EnemiesData({
-        positions: [],
         spawns: [
           { x: -100, y: 100 },
           { x: 100, y: 100 },

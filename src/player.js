@@ -1,13 +1,7 @@
 import { checkAxisAlignedRectanglesCollision } from "./collisions.js";
-import { ATTACK_ANIM_DURATION, ATTACK_OFFSET_FROM_ENTITY, PLAYER_SPEED } from "./consts.js";
-import {
-  Collider,
-  Vec2,
-  angleBetweenVectors,
-  changeColliderAnchorToTopLeft,
-  moveAlongDirection,
-  vecSub,
-} from "./utils.js";
+import { PLAYER_SPEED } from "./consts.js";
+import slash from "./slash.js";
+import { Collider, Vec2 } from "./utils.js";
 
 /**
  * @param {import("./gameState").GameState} gameState
@@ -73,79 +67,25 @@ function movement(gameState) {
 /**
  * @param {import("./gameState").GameState} gameState
  */
-function attack(gameState) {
-  const {
-    input: { mouse, mousedown },
-    entities: { positions, performingAttack },
-    time: { currentFrameTime },
-    rendering: { camera },
-  } = gameState;
-
-  const pos = positions.get("player");
-  const isPerformingAttack = performingAttack.get("player");
-
-  if (isPerformingAttack) {
-    if (currentFrameTime - isPerformingAttack.startedAt < ATTACK_ANIM_DURATION) {
-      return;
-    }
-    performingAttack.delete("player");
-  }
-
-  if (mousedown.button !== 0) return;
-
-  const wmouse = camera.screenToWorld(mouse);
-  const direction = new Vec2(wmouse.x, wmouse.y).sub(pos).normalize();
-
-  performingAttack.set("player", {
-    startedAt: currentFrameTime,
-    direction,
-    position: pos.clone(),
-  });
-}
-
-/**
- * @param {import("./gameState").GameState} gameState
- */
-function drawAttack(gameState) {
-  const {
-    entities: { performingAttack, sprites },
-    rendering: { ctx, camera },
-    time: { currentFrameTime },
-  } = gameState;
-
-  const playerAttack = performingAttack.get("player");
-  if (!playerAttack) return;
-
-  const slashPos = playerAttack.position.clone();
-  slashPos.x -= 8 * playerAttack.direction.x;
-  slashPos.y -= 8 * playerAttack.direction.y;
-
-  const sprite = sprites.get("slash");
-
-  ctx.save();
-  let angleRad = angleBetweenVectors(new Vec2(1, 0), playerAttack.direction);
-  if (playerAttack.direction.y > 0) {
-    angleRad = 2 * Math.PI - angleRad;
-  }
-  const spp = camera.worldToScreen(playerAttack.position);
-  ctx.translate(spp.x, spp.y);
-  ctx.rotate(angleRad);
-  ctx.translate((sprite.size.x * camera.zoom) / 2, (-sprite.size.y * camera.zoom) / 2);
-  ctx.globalAlpha = 1 - (currentFrameTime - playerAttack.startedAt) / ATTACK_ANIM_DURATION;
-  ctx.drawImage(sprite.data, 0, 0, sprite.size.x * camera.zoom, sprite.size.y * camera.zoom);
-  ctx.restore();
-}
-
-/**
- * @param {import("./gameState").GameState} gameState
- */
 function update(gameState) {
+  const {
+    input: { mousedown, mouse },
+    rendering: { camera },
+    entities: { positions },
+  } = gameState;
+
   movement(gameState);
-  attack(gameState);
+
+  const playerPos = positions.get("player");
+  if (mousedown.button == 0) {
+    const wmouse = camera.screenToWorld(mouse);
+    const direction = new Vec2(wmouse.x, wmouse.y).sub(playerPos).normalize();
+    slash.perform(gameState, "player", direction);
+  }
 }
 
 function draw(gameState) {
-  drawAttack(gameState);
+  slash.draw(gameState, "player");
 }
 
 export default {

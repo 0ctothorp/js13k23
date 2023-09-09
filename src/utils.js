@@ -41,6 +41,10 @@ export class Vec2 {
   get length() {
     return Math.sqrt(this.x * this.x + this.y * this.y);
   }
+
+  direction(to) {
+    return new Vec2(this.x, this.y).sub(to).normalize();
+  }
 }
 
 /**
@@ -103,7 +107,9 @@ export function moveTowards(pos, target, speed) {
   const vec = vecSub(target, pos);
   const len = vecLen(vec);
   const moveByVecPercent = speed / len;
-  return new Vec2(pos.x + moveByVecPercent * vec.x, pos.y + moveByVecPercent * vec.y);
+  pos.x += moveByVecPercent * vec.x;
+  pos.y += moveByVecPercent * vec.y;
+  return pos;
 }
 
 /**

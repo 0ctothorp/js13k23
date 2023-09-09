@@ -40,21 +40,15 @@ function towerTriggerCollisions(gameState) {
 function checkProjectileCollisions(gameState) {
   const { projectiles, enemies } = gameState.entities;
 
-  const projCollider = {
-    pos: null,
-    size: { x: PROJECTILE_HIT_BOX_SIZE, y: PROJECTILE_HIT_BOX_SIZE },
-  };
+  const projCollider = new Collider(NaN, NaN, PROJECTILE_HIT_BOX_SIZE, PROJECTILE_HIT_BOX_SIZE);
+  const enemyCollider = new Collider(NaN, NaN, ENEMY_SPRITE_SIZE, ENEMY_SPRITE_SIZE);
 
-  const enemyCollider = {
-    pos: null,
-    size: { x: ENEMY_SPRITE_SIZE, y: ENEMY_SPRITE_SIZE },
-  };
-
+  const enemiesPositions = Enemies.getPositions(gameState);
   for (const projectile of projectiles.positions.filter((x) => x.active)) {
     projCollider.pos = projectile.pos;
-    for (let i = 0; i < enemies.positions.length; i++) {
+    for (let i = 0; i < enemiesPositions.length; i++) {
       if (enemies.hps[i] <= 0) continue;
-      const enemyPos = enemies.positions[i];
+      const enemyPos = enemiesPositions[i];
       enemyCollider.pos = enemyPos;
       const areColliding = checkAxisAlignedRectanglesCollision(projCollider, enemyCollider);
 
@@ -62,8 +56,6 @@ function checkProjectileCollisions(gameState) {
 
       enemies.hps[i] -= TOWER_PROJECTILE_DAMAGE;
       projectile.active = false;
-
-      // document.querySelector("#debug-window .enemies-hp").innerHTML = enemies.hps.toString();
     }
   }
 }

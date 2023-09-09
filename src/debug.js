@@ -1,5 +1,3 @@
-import { Vec2, changeColliderAnchorToTopLeft } from "./utils.js";
-
 /**
  * @param {import("./gameState").GameState} gameState
  */
@@ -29,7 +27,7 @@ function getOserveEnemyPool(gameState) {
   let lastLog = 0;
   return () => {
     if (gameState.time.currentFrameTime - lastLog >= interval) {
-      console.log("enemies pool count:", gameState.entities.enemies.hps.length);
+      console.log("enemies pool count:", gameState.entities.enemies.poolSize);
       lastLog = gameState.time.currentFrameTime;
     }
   };

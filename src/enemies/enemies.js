@@ -2,7 +2,7 @@ import { ENEMY_MOVEMENT_SPEED, ENEMY_SPRITE_SIZE } from "../consts.js";
 import { Collider, Vec2, changeColliderAnchorToTopLeft, moveTowards, vecLen, vecSub } from "../utils.js";
 import { getSprite, drawSprite } from "../sprites.js";
 import { EnemySpawnData } from "./EnemySpawnData.js";
-import { isColliding } from "../collisions.js";
+import { checkAxisAlignedRectanglesCollision, isColliding } from "../collisions.js";
 import slash from "../slash.js";
 
 /** @typedef {import('../gameState').GameState} GameState */
@@ -82,8 +82,10 @@ function update(gameState) {
     entities: {
       enemies: { hps: enemiesHps, poolSize },
       positions,
+      performingAttack,
+      sprites,
     },
-    time: { delta },
+    time: { delta, currentFrameTime },
   } = gameState;
 
   // Iterating through all enemies instead of alive ones, because I need to know the indices.
@@ -100,8 +102,26 @@ function update(gameState) {
       attackThePlayer(gameState, i);
     }
 
+    const slashSprite = sprites.get("slash");
+    const enemySprite = sprites.get("enemy_");
+    const playerSlash = performingAttack.get("player");
+    if (playerSlash && playerSlash.startedAt >= currentFrameTime - delta && !playerSlash.dmgProcessed) {
+      playerSlash.dmgProcessed = true;
+      const slashPos = playerSlash.position;
+      const slashSize = slashSprite.size;
+      if (
+        checkAxisAlignedRectanglesCollision(
+          changeColliderAnchorToTopLeft(new Collider(slashPos.x, slashPos.y, slashSize.x, slashSize.y)),
+          changeColliderAnchorToTopLeft(new Collider(enemyPos.x, enemyPos.y, enemySprite.size.x, enemySprite.size.y))
+        )
+      ) {
+        enemiesHps[i] -= 20;
+      }
+    }
+
     const colliding = isCollidingWithTower(gameState, newPos, enemyPos);
 
+    // check collisiions with other enemies
     for (let j = 0; j < poolSize; j++) {
       if (i == j) continue;
       const otherEnemyPos = positions.get(`enemy_${j}`);
@@ -113,6 +133,7 @@ function update(gameState) {
       colliding.y = otherEnemyCollision.y || colliding.y;
       if (colliding.x && colliding.y) break;
     }
+
     updatePositionAfterCollision(enemyPos, newPos, colliding);
   }
 }

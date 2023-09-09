@@ -121,6 +121,7 @@ export function moveAlongDirection(pos, target, speed) {
   const dir = vecNorm(target);
   pos.x = pos.x + speed * dir.x;
   pos.y = pos.y + speed * dir.y;
+  return pos;
 }
 
 export function set(obj, path, value) {

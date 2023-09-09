@@ -1,5 +1,5 @@
 import { ATTACK_ANIM_DURATION } from "./consts.js";
-import { Vec2, angleBetweenVectors } from "./utils.js";
+import { Vec2, angleBetweenVectors, moveAlongDirection } from "./utils.js";
 
 /**
  * @param {import("./gameState").GameState} gameState
@@ -27,10 +27,9 @@ function slash(gameState, entity, direction) {
     input: { mouse },
     entities: { positions, performingAttack },
     time: { currentFrameTime },
-    rendering: { camera },
   } = gameState;
 
-  const pos = positions.get(entity);
+  const pos = moveAlongDirection(positions.get(entity).clone(), direction, 5);
   const attack = performingAttack.get(entity);
 
   if (attack) return;
@@ -56,10 +55,6 @@ function draw(gameState, entity) {
   const entityAttack = performingAttack.get(entity);
   if (!entityAttack) return;
 
-  const slashPos = entityAttack.position.clone();
-  slashPos.x -= 8 * entityAttack.direction.x;
-  slashPos.y -= 8 * entityAttack.direction.y;
-
   const sprite = sprites.get("slash");
 
   ctx.save();
@@ -70,7 +65,7 @@ function draw(gameState, entity) {
   const spp = camera.worldToScreen(entityAttack.position);
   ctx.translate(spp.x, spp.y);
   ctx.rotate(angleRad);
-  ctx.translate((sprite.size.x * camera.zoom) / 2, (-sprite.size.y * camera.zoom) / 2);
+  ctx.translate(0, (-sprite.size.y * camera.zoom) / 2);
   ctx.globalAlpha = 1 - (currentFrameTime - entityAttack.startedAt) / ATTACK_ANIM_DURATION;
   ctx.drawImage(sprite.data, 0, 0, sprite.size.x * camera.zoom, sprite.size.y * camera.zoom);
   ctx.restore();

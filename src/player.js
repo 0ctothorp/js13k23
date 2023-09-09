@@ -1,6 +1,7 @@
 import { checkAxisAlignedRectanglesCollision } from "./collisions.js";
 import { PLAYER_SPEED } from "./consts.js";
 import slash from "./slash.js";
+import { drawSprite } from "./sprites.js";
 import { Collider, Vec2 } from "./utils.js";
 
 /**
@@ -84,7 +85,14 @@ function update(gameState) {
   }
 }
 
+/**
+ * @param {import("./gameState").GameState} gameState
+ */
 function draw(gameState) {
+  const {
+    entities: { sprites, positions },
+  } = gameState;
+  drawSprite(sprites.get("player"), positions.get("player"), gameState);
   slash.draw(gameState, "player");
 }
 

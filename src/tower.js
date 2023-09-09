@@ -8,6 +8,7 @@ import {
   TOWER_PROJECTILE_SPEED,
 } from "./consts.js";
 import { checkAxisAlignedRectanglesCollision } from "./collisions.js";
+import { drawSprite } from "./sprites.js";
 
 /**
  * @param {import("./gameState").GameState} gameState
@@ -148,13 +149,29 @@ const PROJECTILE_HIT_BOX_SIZE = 2;
  */
 function draw(gameState) {
   const { ctx, camera } = gameState.rendering;
-  const { positions } = gameState.entities.projectiles;
+  const {
+    projectiles: { positions: projectilePositions },
+    sprites,
+    positions,
+  } = gameState.entities;
+
+  drawSprite(sprites.get("tower-down"), positions.get("tower-down"), gameState);
+
+  if (gameState.entities["tower-up"]?.isTransparent) {
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    drawSprite(sprites.get("tower-up"), positions.get("tower-up"), gameState);
+    ctx.restore();
+  } else {
+    drawSprite(sprites.get("tower-up"), positions.get("tower-up"), gameState);
+  }
+
   ctx.fillStyle = "yellow";
 
   const wsize = PROJECTILE_HIT_BOX_SIZE;
   const ssize = wsize * camera.zoom;
 
-  const onlyActive = positions.filter((x) => x.active);
+  const onlyActive = projectilePositions.filter((x) => x.active);
 
   for (const p of onlyActive) {
     const spos = camera.worldToScreen(p.pos);

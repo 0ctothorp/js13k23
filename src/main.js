@@ -3,7 +3,6 @@ import { WALL_SPRITE_WIDTH_PX } from "./consts.js";
 import Enemies from "./enemies/enemies.js";
 import EnemySpawns from "./enemies/enemySpawns.js";
 import { getGameState } from "./gameState.js";
-import { drawSprites } from "./sprites.js";
 import debug from "./debug.js";
 import player from "./player.js";
 import tower from "./tower.js";
@@ -159,7 +158,6 @@ function draw(gameState) {
   const { ctx, canvas } = gameState.rendering;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   Enemies.draw(gameState);
-  drawSprites(gameState);
   tower.draw(gameState);
   player.draw(gameState);
 
@@ -193,7 +191,6 @@ function setup(gameState) {
 
     Enemies.update(gameState);
     EnemySpawns.update(gameState);
-
     tower.update(gameState);
     slash.update(gameState);
 

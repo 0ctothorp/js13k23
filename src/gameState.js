@@ -3,6 +3,8 @@ import { ENEMY_SPRITE_SIZE } from "./consts.js";
 import { EnemiesData } from "./enemies/enemies.js";
 import { Collider, Vec2 } from "./utils.js";
 
+/** @typedef {{size: Vec2; data: HTMLImageElement}} Sprite */
+
 /** @type {HTMLImageElement} */
 const wallSprite = document.querySelector("#sprite-wall");
 /** @type {HTMLImageElement} */
@@ -54,43 +56,43 @@ export function getGameState(canvas) {
         [
           "wall_",
           {
-            size: { x: 8, y: 8 },
             data: wallSprite,
+            size: new Vec2(8, 8),
           },
         ],
         [
           "enemy_",
           {
             data: enemySprite,
-            size: { x: ENEMY_SPRITE_SIZE, y: ENEMY_SPRITE_SIZE },
+            size: new Vec2(ENEMY_SPRITE_SIZE, ENEMY_SPRITE_SIZE),
           },
         ],
         [
           "tower-down",
           {
             data: document.querySelector("#sprite-tower-down"),
-            size: { x: 32, y: 24 },
+            size: new Vec2(32, 24),
           },
         ],
         [
           "tower-up",
           {
             data: document.querySelector("#sprite-tower-up"),
-            size: { x: 32, y: 24 },
+            size: new Vec2(32, 24),
           },
         ],
         [
           "player",
           {
             data: knightSprite,
-            size: { x: ENEMY_SPRITE_SIZE, y: ENEMY_SPRITE_SIZE },
+            size: new Vec2(ENEMY_SPRITE_SIZE, ENEMY_SPRITE_SIZE),
           },
         ],
         [
           "slash",
           {
             data: document.querySelector("#sprite-slash"),
-            size: { x: ENEMY_SPRITE_SIZE, y: ENEMY_SPRITE_SIZE },
+            size: new Vec2(ENEMY_SPRITE_SIZE, ENEMY_SPRITE_SIZE),
           },
         ],
       ]),

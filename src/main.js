@@ -197,7 +197,7 @@ function setup(gameState) {
     draw(gameState);
 
     // debug
-    observeEnemiesPool();
+    // observeEnemiesPool();
 
     // debug
     // {

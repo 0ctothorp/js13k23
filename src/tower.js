@@ -48,14 +48,15 @@ function checkProjectileCollisions(gameState) {
   for (const projectile of projectiles.positions.filter((x) => x.active)) {
     projCollider.pos = projectile.pos;
     for (let i = 0; i < enemiesPositions.length; i++) {
-      if (enemies.hps[i] <= 0) continue;
+      const hp = enemies.hps.get(`enemy_${i}`);
+      if (hp <= 0) continue;
       const enemyPos = enemiesPositions[i];
       enemyCollider.pos = enemyPos;
       const areColliding = checkAxisAlignedRectanglesCollision(projCollider, enemyCollider);
 
       if (!areColliding) continue;
 
-      enemies.hps[i] -= TOWER_PROJECTILE_DAMAGE;
+      enemies.hps.set(`enemy_${i}`, hp - TOWER_PROJECTILE_DAMAGE);
       projectile.active = false;
     }
   }

@@ -57,12 +57,12 @@ function draw(gameState, entity) {
 
   const sprite = sprites.get("slash");
 
-  ctx.save();
   let angleRad = angleBetweenVectors(new Vec2(1, 0), entityAttack.direction);
   if (entityAttack.direction.y > 0) {
     angleRad = 2 * Math.PI - angleRad;
   }
   const spp = camera.worldToScreen(entityAttack.position);
+  ctx.save();
   ctx.translate(spp.x, spp.y);
   ctx.rotate(angleRad);
   ctx.translate(0, (-sprite.size.y * camera.zoom) / 2);

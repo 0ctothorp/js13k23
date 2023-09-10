@@ -8,8 +8,8 @@ import slash from "../slash.js";
 /** @typedef {import('../gameState').GameState} GameState */
 
 class EnemiesData {
-  /** @type {Array<number>} */
-  hps = [];
+  /** @type {Map<string,number>} */
+  hps = new Map();
   poolSize = 0;
 
   /**
@@ -91,8 +91,10 @@ function update(gameState) {
   // Iterating through all enemies instead of alive ones, because I need to know the indices.
   // I mght store the indices in the getAliveItems returned object.
   for (let i = 0; i < poolSize; i++) {
-    const enemyPos = positions.get(`enemy_${i}`);
-    if (enemiesHps[i] <= 0) continue;
+    const key = `enemy_${i}`;
+    const enemyPos = positions.get(key);
+    const hp = enemiesHps.get(key);
+    if (hp <= 0) continue;
 
     const target = getChosenTarget(gameState, enemyPos);
     let newPos = enemyPos.clone();
@@ -102,11 +104,12 @@ function update(gameState) {
       attackThePlayer(gameState, i);
     }
 
+    // collision with player's slash
     const slashSprite = sprites.get("slash");
     const enemySprite = sprites.get("enemy_");
     const playerSlash = performingAttack.get("player");
     if (playerSlash && playerSlash.startedAt >= currentFrameTime - delta && !playerSlash.dmgProcessed) {
-      playerSlash.dmgProcessed = true;
+      console.log("checking slash", key);
       const slashPos = playerSlash.position;
       const slashSize = slashSprite.size;
       if (
@@ -115,7 +118,11 @@ function update(gameState) {
           changeColliderAnchorToTopLeft(new Collider(enemyPos.x, enemyPos.y, enemySprite.size.x, enemySprite.size.y))
         )
       ) {
-        enemiesHps[i] -= 20;
+        playerSlash.dmgProcessed = true;
+        const newhp = hp - 20;
+        enemiesHps.set(key, newhp);
+        console.log("slashing", key);
+        if (newhp <= 0) continue;
       }
     }
 
@@ -150,17 +157,26 @@ function draw(gameState) {
   const hpBarHeight = 5;
 
   for (let i = 0; i < poolSize; i++) {
-    if (hps[i] <= 0) continue;
-    const position = positions.get(`enemy_${i}`);
+    const key = `enemy_${i}`;
+    const hp = enemies.hps.get(key);
+    if (hp <= 0) continue;
+    const position = positions.get(key);
 
     const sprite = getSprite("enemy_", gameState);
     drawSprite(sprite, position, gameState);
 
     const spos = camera.worldToScreen(position);
+
+    // debug
+    {
+      ctx.fillStyle = "white";
+      ctx.fillText(`enemy_${i}`, spos.x, spos.y - sEnemySize / 2 - hpBarHeight - 1);
+    }
+
     ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
     ctx.fillRect(spos.x - (sEnemySize * 0.9) / 2, spos.y - sEnemySize / 2 - hpBarHeight, sEnemySize * 0.9, hpBarHeight);
 
-    const hpFrac = hps[i] / 100;
+    const hpFrac = hp / 100;
 
     ctx.fillStyle = "rgb(0, 255, 0)";
     ctx.fillRect(
@@ -189,10 +205,11 @@ function getAliveItems(gameState) {
   };
 
   for (let i = 0; i < poolSize; i++) {
-    const hp = hps[i];
+    const key = `enemy_${i}`;
+    const hp = hps.get(key);
     if (hp <= 0) continue;
 
-    result.positions.push(positions.get(`enemy_${i}`));
+    result.positions.push(positions.get(key));
     result.hps.push(hp);
   }
 
@@ -206,17 +223,24 @@ function getAliveItems(gameState) {
 function createNew(gameState, position) {
   const { enemies, positions } = gameState.entities;
 
-  const idx = enemies.hps.findIndex((x) => x <= 0);
+  let foundKey = -1;
+  for (const [k, hp] of enemies.hps) {
+    if (hp <= 0) {
+      foundKey = k;
+      break;
+    }
+  }
 
-  if (idx === -1) {
+  if (foundKey === -1) {
     enemies.poolSize += 1;
-    positions.set(`enemy_${enemies.poolSize - 1}`, position.clone());
-    enemies.hps.push(100);
+    const key = `enemy_${enemies.poolSize - 1}`;
+    positions.set(key, position.clone());
+    enemies.hps.set(key, 100);
     return;
   }
 
-  positions.set(`enemy_${idx}`, position.clone());
-  enemies.hps[idx] = 100;
+  positions.set(foundKey, position.clone());
+  enemies.hps.set(foundKey, 100);
 }
 
 /**

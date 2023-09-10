@@ -1,5 +1,5 @@
 import { ENEMY_MOVEMENT_SPEED, ENEMY_SPRITE_SIZE } from "../consts.js";
-import { Collider, Vec2, changeColliderAnchorToTopLeft, moveTowards, vecLen, vecSub } from "../utils.js";
+import { Collider, Vec2, changeColliderAnchorToTopLeft, moveTowards, set, vecLen, vecSub } from "../utils.js";
 import { getSprite, drawSprite } from "../sprites.js";
 import { EnemySpawnData } from "./EnemySpawnData.js";
 import { checkAxisAlignedRectanglesCollision, isColliding } from "../collisions.js";
@@ -103,6 +103,7 @@ function update(gameState) {
     } else {
       attackThePlayer(gameState, i);
     }
+    set(gameState.entities, `${key}.target`, target);
 
     // collision with player's slash
     const slashSprite = sprites.get("slash");
@@ -153,15 +154,33 @@ function draw(gameState) {
 
   const sEnemySize = ENEMY_SPRITE_SIZE * camera.zoom;
   const hpBarHeight = 5;
+  const unit = camera.zoom;
 
   for (let i = 0; i < poolSize; i++) {
     const key = `enemy_${i}`;
-    const hp = enemies.hps.get(key);
+    const hp = hps.get(key);
     if (hp <= 0) continue;
     const position = positions.get(key);
+    const sposition = camera.worldToScreen(position);
 
     const sprite = getSprite("enemy_", gameState);
-    drawSprite(sprite, position, gameState);
+    const dir = position.direction(gameState.entities[key]?.target || new Vec2(0, 0));
+    ctx.save();
+    ctx.translate(sposition.x, sposition.y);
+    ctx.scale(Math.sign(dir.x), 1);
+    ctx.drawImage(
+      sprite.data,
+      0,
+      0,
+      sprite.data.naturalWidth,
+      sprite.data.naturalHeight,
+      (-sprite.size.x * unit) / 2,
+      (-sprite.size.y * unit) / 2,
+      sprite.size.x * unit,
+      sprite.size.y * unit
+    );
+    ctx.restore();
+    // drawSprite(sprite, position, gameState);
 
     const spos = camera.worldToScreen(position);
 

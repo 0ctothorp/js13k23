@@ -42,6 +42,9 @@ export class Vec2 {
     return Math.sqrt(this.x * this.x + this.y * this.y);
   }
 
+  /**
+   * @param {Vec2} to
+   */
   direction(to) {
     return new Vec2(this.x, this.y).sub(to).normalize();
   }

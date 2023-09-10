@@ -91,8 +91,32 @@ function update(gameState) {
 function draw(gameState) {
   const {
     entities: { sprites, positions },
+    input: { mouse },
+    rendering: { ctx, camera },
   } = gameState;
-  drawSprite(sprites.get("player"), positions.get("player"), gameState);
+
+  const unit = camera.zoom;
+
+  const sprite = sprites.get("player");
+  const wmouse = camera.screenToWorld(mouse);
+  const playerPos = positions.get("player");
+  const splayerPos = camera.worldToScreen(playerPos);
+  const dir = playerPos.direction(wmouse);
+  ctx.save();
+  ctx.translate(splayerPos.x, splayerPos.y);
+  ctx.scale(Math.sign(dir.x), 1);
+  ctx.drawImage(
+    sprite.data,
+    0,
+    0,
+    sprite.data.naturalWidth,
+    sprite.data.naturalHeight,
+    (-sprite.size.x * unit) / 2,
+    (-sprite.size.y * unit) / 2,
+    sprite.size.x * unit,
+    sprite.size.y * unit
+  );
+  ctx.restore();
   slash.draw(gameState, "player");
 }
 

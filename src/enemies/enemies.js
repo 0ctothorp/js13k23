@@ -109,7 +109,6 @@ function update(gameState) {
     const enemySprite = sprites.get("enemy_");
     const playerSlash = performingAttack.get("player");
     if (playerSlash && playerSlash.startedAt >= currentFrameTime - delta && !playerSlash.dmgProcessed) {
-      console.log("checking slash", key);
       const slashPos = playerSlash.position;
       const slashSize = slashSprite.size;
       if (
@@ -121,7 +120,6 @@ function update(gameState) {
         playerSlash.dmgProcessed = true;
         const newhp = hp - 20;
         enemiesHps.set(key, newhp);
-        console.log("slashing", key);
         if (newhp <= 0) continue;
       }
     }

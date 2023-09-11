@@ -45,6 +45,17 @@
         font-weight: 600;
       }
 
+      #restart {
+        border: 0;
+        background: rgb(0, 255, 0);
+        padding: 1rem;
+        margin: auto;
+        display: block;
+        font-size: 1.25rem;
+        text-transform: uppercase;
+        cursor: pointer;
+      }
+
       /* DEBUG-START */
       /* #fps-meter {
         font-size: 2rem;
@@ -77,7 +88,7 @@
       <div id="defeat" class="dispnone">
         <p>You made it on the battlefield for <span id="duration"></span></p>
         <p id="best-effort-p" class="dispnone">Your previous best effort is <span id="best-effort-v"></span></p>
-        <button onclick="startGame()">Try again</button>
+        <button id="restart" onclick="startGame()">Try again</button>
       </div>
     </div>
   </body>

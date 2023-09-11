@@ -4,7 +4,7 @@
   "description": "",
   "scripts": {
     "start": "serve ./src",
-    "build": "parcel build src/index.html && .\\tools\\zip.ps1"
+    "build": "parcel build src/index.html"
   },
   "keywords": [],
   "author": "",

@@ -10,6 +10,22 @@ import {
 import { checkAxisAlignedRectanglesCollision } from "./collisions.js";
 import { drawSprite } from "./sprites.js";
 
+export class TowerData {
+  // I could move tower projectiles data into here
+  hp = 100;
+
+  /**
+   * @param {number} x
+   */
+  decreaseHP(x) {
+    this.hp = Math.max(0, this.hp - x);
+  }
+
+  isDead() {
+    return this.hp === 0;
+  }
+}
+
 /**
  * @param {import("./gameState").GameState} gameState
  */
@@ -154,17 +170,24 @@ function draw(gameState) {
     projectiles: { positions: projectilePositions },
     sprites,
     positions,
+    tower,
   } = gameState.entities;
+
+  const towerUp = {
+    sprite: sprites.get("tower-up"),
+    pos: positions.get("tower-up"),
+    entity: gameState.entities["tower-up"],
+  };
 
   drawSprite(sprites.get("tower-down"), positions.get("tower-down"), gameState);
 
-  if (gameState.entities["tower-up"]?.isTransparent) {
+  if (towerUp.entity?.isTransparent) {
     ctx.save();
     ctx.globalAlpha = 0.5;
-    drawSprite(sprites.get("tower-up"), positions.get("tower-up"), gameState);
+    drawSprite(towerUp.sprite, towerUp.pos, gameState);
     ctx.restore();
   } else {
-    drawSprite(sprites.get("tower-up"), positions.get("tower-up"), gameState);
+    drawSprite(towerUp.sprite, towerUp.pos, gameState);
   }
 
   ctx.fillStyle = "yellow";
@@ -182,6 +205,30 @@ function draw(gameState) {
     ctx.ellipse(spos.x + wsize / 2, spos.y + wsize / 2, ssize, ssize, 0, 0, 2 * Math.PI);
     ctx.fill();
   }
+
+  const screenTowerUp = camera.worldToScreen(towerUp.pos);
+  const screenTowerUpSize = towerUp.sprite.size.clone().scale(camera.zoom);
+  const barHeight = 5;
+  const yoffset = 5;
+  const barWidth = screenTowerUpSize.x * 0.8;
+  // hp bar
+  ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
+  ctx.fillRect(
+    screenTowerUp.x - barWidth / 2,
+    screenTowerUp.y - screenTowerUpSize.y / 2 - barHeight - yoffset,
+    barWidth,
+    barHeight
+  );
+
+  const hpFrac = tower.hp / 100;
+
+  ctx.fillStyle = "rgb(0, 255, 0)";
+  ctx.fillRect(
+    screenTowerUp.x - barWidth / 2,
+    screenTowerUp.y - screenTowerUpSize.y / 2 - barHeight - yoffset,
+    barWidth * hpFrac,
+    barHeight
+  );
 }
 
 export default {

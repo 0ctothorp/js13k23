@@ -1,8 +1,31 @@
 import { checkAxisAlignedRectanglesCollision } from "./collisions.js";
 import { PLAYER_SPEED } from "./consts.js";
 import slash from "./slash.js";
-import { drawSprite } from "./sprites.js";
 import { Collider, Vec2 } from "./utils.js";
+
+export class PlayerData {
+  hp = 100;
+
+  decreaseHp(x) {
+    this.hp = Math.max(this.hp - x, 0);
+  }
+
+  isDead() {
+    return this.hp === 0;
+  }
+}
+
+/**
+ * @param {import("./gameState").GameState} gameState
+ */
+function getPlayerCollider(gameState) {
+  const {
+    entities: { positions, sprites },
+  } = gameState;
+  const pos = positions.get("player");
+  const sprite = sprites.get("player");
+  return new Collider(pos.x, pos.y, sprite.size.x, sprite.size.y);
+}
 
 /**
  * @param {import("./gameState").GameState} gameState
@@ -37,18 +60,15 @@ function movement(gameState) {
   let isCollidingx = false;
   let isCollidingy = false;
 
-  const wallSpriteSize = sprites.get("wall_").size;
+  // const wallSpriteSize = sprites.get("wall_").size;
   /** @type {Vec2} */
   const playerSpriteSize = sprites.get("player").size;
   const psizeHalf = playerSpriteSize.x / 2;
 
-  // check collisions with walls only
-  // TODO: create a collider together with a wall, so we're not allocating new memory for colliders every time a player
-  // moves and there are walls on the map
-  const colliders = [...positions.entries()]
-    .filter(([k]) => k.startsWith("wall_"))
-    .map(([, v]) => new Collider(v.x, v.y, wallSpriteSize.x, wallSpriteSize.y));
-  colliders.push(gameState.colliders["tower-down"]);
+  // const colliders = [...positions.entries()]
+  //   .filter(([k]) => k.startsWith("wall_"))
+  //   .map(([, v]) => new Collider(v.x, v.y, wallSpriteSize.x, wallSpriteSize.y));
+  const colliders = [gameState.colliders.get("tower-down")];
 
   const pcollider = new Collider(tmpx - psizeHalf, posCenter.y + psizeHalf, playerSpriteSize.x, playerSpriteSize.y);
   for (const collider of colliders) {
@@ -90,7 +110,7 @@ function update(gameState) {
  */
 function draw(gameState) {
   const {
-    entities: { sprites, positions },
+    entities: { sprites, positions, player },
     input: { mouse },
     rendering: { ctx, camera },
   } = gameState;
@@ -118,9 +138,28 @@ function draw(gameState) {
   );
   ctx.restore();
   slash.draw(gameState, "player");
+
+  const hpBar = {
+    width: sprite?.size.x * camera.zoom * 0.7,
+    height: 4,
+    yoffset: -6,
+  };
+  const hpPos = {
+    x: splayerPos.x - hpBar.width / 2,
+    y: splayerPos.y - (sprite?.size.y * camera.zoom) / 2 - hpBar.height - hpBar.yoffset,
+  };
+
+  ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
+  ctx.fillRect(hpPos.x, hpPos.y, hpBar.width, hpBar.height);
+
+  const hpFrac = player.hp / 100;
+
+  ctx.fillStyle = "rgb(0, 255, 0)";
+  ctx.fillRect(hpPos.x, hpPos.y, hpBar.width * hpFrac, hpBar.height);
 }
 
 export default {
+  getCollider: getPlayerCollider,
   update,
   draw,
 };

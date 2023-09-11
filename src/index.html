@@ -11,6 +11,8 @@
         background: black;
         font-size: 14px;
         overflow: hidden;
+        font-family: Verdana, Geneva, Tahoma, sans-serif;
+        font-size: 16px;
       }
 
       .dispnone {
@@ -21,19 +23,39 @@
         position: fixed;
         top: 0;
         left: 0;
+        width: 100vw;
+        height: 100vh;
+      }
+
+      [data-stage="defeat"] #defeat {
+        display: block;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(255, 255, 255, 0.8);
+        padding: 1rem;
+      }
+
+      #duration {
+        font-weight: 600;
+      }
+
+      #best-effort-v {
+        font-weight: 600;
       }
 
       /* DEBUG-START */
-      #fps-meter {
+      /* #fps-meter {
         font-size: 2rem;
         color: lime;
         position: absolute;
-      }
+      } */
       /* DEBUG-END */
     </style>
     <script src="./main.js" type="module"></script>
   </head>
-  <body>
+  <body data-stage="game">
     <img src="./assets/wall.webp" class="dispnone" id="sprite-wall" />
     <img src="./assets/knight_1.webp" class="dispnone" id="sprite-knight" />
     <img src="./assets/mongol_1.webp" class="dispnone" id="sprite-enemy" />
@@ -52,6 +74,11 @@
       <!-- DEBUG-START -->
       <!-- <div id="fps-meter">0</div> -->
       <!-- DEBUG-END -->
+      <div id="defeat" class="dispnone">
+        <p>You made it on the battlefield for <span id="duration"></span></p>
+        <p id="best-effort-p" class="dispnone">Your previous best effort is <span id="best-effort-v"></span></p>
+        <button onclick="startGame()">Try again</button>
+      </div>
     </div>
   </body>
 </html>

@@ -4,13 +4,24 @@ import Enemies from "./enemies/enemies.js";
 import EnemySpawns from "./enemies/enemySpawns.js";
 import { getGameState } from "./gameState.js";
 import debug from "./debug.js";
-import player from "./player.js";
+import Player from "./player.js";
 import tower from "./tower.js";
 import slash from "./slash.js";
+import { showDefeat } from "./ui.js";
 
 /** @typedef {import("./gameState.js").GameState} GameState */
 
+/**
+ *
+ * @param {GameState} gameState
+ * @param {number} nextFrameTime
+ * @returns
+ */
 function setTime(gameState, nextFrameTime) {
+  if (gameState.time.startTime === -1) {
+    gameState.time.startTime = nextFrameTime;
+  }
+
   if (!gameState.time.currentFrameTime) {
     gameState.time.currentFrameTime = nextFrameTime;
     return 0;
@@ -80,13 +91,10 @@ function attachEventListeners(gameState) {
   const { canvas } = rendering;
   const { mouse, clicks } = input;
 
-  window.addEventListener(
-    "resize",
-    debounce(() => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    })
-  );
+  window.onresize = debounce(() => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  });
 
   window.onkeydown = (event) => {
     keyboardInput(gameState, event.code, true);
@@ -118,11 +126,6 @@ function attachEventListeners(gameState) {
 
   document.onmousedown = (event) => {
     input.mousedown = { button: event.button };
-  };
-
-  document.oncontextmenu = (event) => {
-    // TODO: check on other browsers
-    event.preventDefault();
   };
 }
 
@@ -157,9 +160,9 @@ function building(gameState) {
 function draw(gameState) {
   const { ctx, canvas } = gameState.rendering;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  Enemies.draw(gameState);
   tower.draw(gameState);
-  player.draw(gameState);
+  Enemies.draw(gameState);
+  Player.draw(gameState);
 
   // debug.drawColliders(gameState);
 
@@ -175,24 +178,36 @@ function draw(gameState) {
  */
 function setup(gameState) {
   attachEventListeners(gameState);
+  document.body.dataset.stage = "game";
 
-  gameState.rendering.ctx.imageSmoothingEnabled = false;
+  const {
+    rendering: { ctx },
+    entities: { enemies, player },
+  } = gameState;
 
-  gameState.entities.enemies.spawns.forEach((s) => {
+  ctx.imageSmoothingEnabled = false;
+
+  enemies.spawns.forEach((s) => {
     s.active = true;
   });
 
-  const observeEnemiesPool = debug.getOserveEnemyPool(gameState);
+  // const observeEnemiesPool = debug.getOserveEnemyPool(gameState);
 
   return function gameLoop(frameTime) {
     setTime(gameState, frameTime);
 
-    player.update(gameState);
+    if (gameState.meta.stage === "defeat") return;
 
-    Enemies.update(gameState);
-    EnemySpawns.update(gameState);
-    tower.update(gameState);
-    slash.update(gameState);
+    if (player.isDead()) {
+      gameState.meta.stage = "defeat";
+      showDefeat(gameState);
+    } else {
+      Player.update(gameState);
+      Enemies.update(gameState);
+      EnemySpawns.update(gameState);
+      tower.update(gameState);
+      slash.update(gameState);
+    }
 
     draw(gameState);
 
@@ -220,13 +235,13 @@ function setup(gameState) {
   };
 }
 
-function startGame() {
+window.startGame = function startGame() {
   const canvas = document.querySelector("canvas");
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
   const state = getGameState(canvas);
   const gameLoop = setup(state);
   requestAnimationFrame(gameLoop);
-}
+};
 
 startGame();

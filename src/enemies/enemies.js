@@ -1,6 +1,6 @@
-import { ENEMY_MOVEMENT_SPEED, ENEMY_SPRITE_SIZE } from "../consts.js";
+import { ENEMY_ATTACK_TIMEOUT, ENEMY_MOVEMENT_SPEED, ENEMY_SPRITE_SIZE } from "../consts.js";
 import { Collider, Vec2, changeColliderAnchorToTopLeft, moveTowards, set, vecLen, vecSub } from "../utils.js";
-import { getSprite, drawSprite } from "../sprites.js";
+import { getSprite } from "../sprites.js";
 import { EnemySpawnData } from "./EnemySpawnData.js";
 import { checkAxisAlignedRectanglesCollision, isColliding } from "../collisions.js";
 import slash from "../slash.js";
@@ -26,7 +26,7 @@ class EnemiesData {
  * @param {Vec2} oldPos
  */
 function isCollidingWithTower(gameState, position, oldPos) {
-  const towerCollider = gameState.colliders["tower-down"];
+  const towerCollider = gameState.colliders.get("tower-down");
   return isColliding(position, oldPos, towerCollider);
 }
 
@@ -53,7 +53,6 @@ function getChosenTarget(gameState, position) {
   const playerPos = positions.get("player");
   const playerDist = vecLen(vecSub(playerPos, position));
 
-  if (playerDist < 20) return null;
   if (playerDist < 50) target = playerPos;
   return target;
 }
@@ -61,17 +60,64 @@ function getChosenTarget(gameState, position) {
 /**
  * @param {GameState} gameState
  * @param {number | string} enemyIdx
+ * @param {string} target
  */
-function attackThePlayer(gameState, enemyIdx) {
+function attack(gameState, enemyIdx, target) {
   const {
     entities: { positions },
+    time: { currentFrameTime },
   } = gameState;
 
-  const playerPos = positions.get("player");
   const enemyKey = `enemy_${enemyIdx}`;
+  const lastAttackAt = gameState.entities[enemyKey]?.lastAttackAt;
+  if (typeof lastAttackAt === "number" && currentFrameTime - lastAttackAt < ENEMY_ATTACK_TIMEOUT) {
+    return false;
+  }
+
+  const targetPos = positions.get(target);
   const enemyPos = positions.get(enemyKey);
-  const direction = playerPos.direction(enemyPos);
+  const direction = targetPos.direction(enemyPos);
+  set(gameState.entities, `${enemyKey}.lastAttackAt`, currentFrameTime);
   slash.perform(gameState, enemyKey, direction);
+  return true;
+}
+
+/**
+ * @param {GameState} gameState
+ * @param {Vec2} enemyPos
+ * @param {number} enemyIndex
+ */
+function isDeadByPlayersAttack(gameState, enemyPos, enemyIndex) {
+  const {
+    entities: {
+      performingAttack,
+      sprites,
+      enemies: { hps },
+    },
+    time: { currentFrameTime, delta },
+  } = gameState;
+
+  const key = `enemy_${enemyIndex}`;
+  const hp = hps.get(key);
+  const slashSprite = sprites.get("slash");
+  const enemySprite = sprites.get("enemy_");
+  const playerSlash = performingAttack.get("player");
+  if (playerSlash && playerSlash.startedAt >= currentFrameTime - delta && !playerSlash.dmgProcessed) {
+    const slashPos = playerSlash.position;
+    const slashSize = slashSprite.size;
+    if (
+      checkAxisAlignedRectanglesCollision(
+        changeColliderAnchorToTopLeft(new Collider(slashPos.x, slashPos.y, slashSize.x, slashSize.y)),
+        changeColliderAnchorToTopLeft(new Collider(enemyPos.x, enemyPos.y, enemySprite.size.x, enemySprite.size.y))
+      )
+    ) {
+      playerSlash.dmgProcessed = true;
+      const newhp = hp - 20;
+      hps.set(key, newhp);
+      if (newhp <= 0) return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -82,11 +128,15 @@ function update(gameState) {
     entities: {
       enemies: { hps: enemiesHps, poolSize },
       positions,
-      performingAttack,
       sprites,
+      tower,
+      player,
     },
-    time: { delta, currentFrameTime },
+    time: { delta },
   } = gameState;
+
+  const playerPos = positions.get("player");
+  const playerSprite = sprites.get("player");
 
   // Iterating through all enemies instead of alive ones, because I need to know the indices.
   // I mght store the indices in the getAliveItems returned object.
@@ -98,39 +148,40 @@ function update(gameState) {
 
     const target = getChosenTarget(gameState, enemyPos);
     let newPos = enemyPos.clone();
-    if (target) {
-      moveTowards(newPos, target, ENEMY_MOVEMENT_SPEED * delta);
-    } else {
-      attackThePlayer(gameState, i);
+    moveTowards(newPos, target, ENEMY_MOVEMENT_SPEED * delta);
+
+    if (isDeadByPlayersAttack(gameState, newPos, i)) {
+      continue;
     }
+
+    const collidingWithPlayer = isColliding(
+      newPos,
+      enemyPos,
+      changeColliderAnchorToTopLeft(new Collider(playerPos.x, playerPos.y, playerSprite.size.x, playerSprite.size.y))
+    );
+
+    if (collidingWithPlayer.x || collidingWithPlayer.y) {
+      if (attack(gameState, i, "player")) player.decreaseHp(4);
+    }
+
     set(gameState.entities, `${key}.target`, target);
 
-    // collision with player's slash
-    const slashSprite = sprites.get("slash");
-    const enemySprite = sprites.get("enemy_");
-    const playerSlash = performingAttack.get("player");
-    if (playerSlash && playerSlash.startedAt >= currentFrameTime - delta && !playerSlash.dmgProcessed) {
-      const slashPos = playerSlash.position;
-      const slashSize = slashSprite.size;
-      if (
-        checkAxisAlignedRectanglesCollision(
-          changeColliderAnchorToTopLeft(new Collider(slashPos.x, slashPos.y, slashSize.x, slashSize.y)),
-          changeColliderAnchorToTopLeft(new Collider(enemyPos.x, enemyPos.y, enemySprite.size.x, enemySprite.size.y))
-        )
-      ) {
-        playerSlash.dmgProcessed = true;
-        const newhp = hp - 20;
-        enemiesHps.set(key, newhp);
-        if (newhp <= 0) continue;
-      }
+    const colliding = isCollidingWithTower(gameState, newPos, enemyPos);
+    if (colliding.x || colliding.y) {
+      if (attack(gameState, i, "tower-down")) tower.decreaseHP(1);
     }
 
-    const colliding = isCollidingWithTower(gameState, newPos, enemyPos);
+    colliding.x = collidingWithPlayer.x || colliding.x;
+    colliding.y = collidingWithPlayer.y || colliding.y;
 
     // check collisiions with other enemies
     for (let j = 0; j < poolSize; j++) {
       if (i == j) continue;
-      const otherEnemyPos = positions.get(`enemy_${j}`);
+      const jenemyKey = `enemy_${j}`;
+      if (enemiesHps.get(jenemyKey) <= 0) {
+        continue;
+      }
+      const otherEnemyPos = positions.get(jenemyKey);
       const collider = changeColliderAnchorToTopLeft(
         new Collider(otherEnemyPos.x, otherEnemyPos.y, ENEMY_SPRITE_SIZE, ENEMY_SPRITE_SIZE)
       );
@@ -153,7 +204,6 @@ function draw(gameState) {
   const { camera, ctx } = gameState.rendering;
 
   const sEnemySize = ENEMY_SPRITE_SIZE * camera.zoom;
-  const hpBarHeight = 5;
   const unit = camera.zoom;
 
   for (let i = 0; i < poolSize; i++) {
@@ -185,22 +235,33 @@ function draw(gameState) {
     const spos = camera.worldToScreen(position);
 
     // debug
-    {
-      ctx.fillStyle = "white";
-      ctx.fillText(`enemy_${i}`, spos.x, spos.y - sEnemySize / 2 - hpBarHeight - 1);
-    }
+    // {
+    //   ctx.fillStyle = "white";
+    //   ctx.fillText(`enemy_${i}`, spos.x, spos.y - sEnemySize / 2 - hpBarHeight - 1);
+    // }
+
+    const hpBar = {
+      width: sEnemySize * 0.7,
+      height: 4,
+      yoffset: 5,
+    };
 
     ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
-    ctx.fillRect(spos.x - (sEnemySize * 0.9) / 2, spos.y - sEnemySize / 2 - hpBarHeight, sEnemySize * 0.9, hpBarHeight);
+    ctx.fillRect(
+      spos.x - hpBar.width / 2,
+      spos.y - sEnemySize / 2 - hpBar.height - hpBar.yoffset,
+      hpBar.width,
+      hpBar.height
+    );
 
     const hpFrac = hp / 100;
 
     ctx.fillStyle = "rgb(0, 255, 0)";
     ctx.fillRect(
-      spos.x - (sEnemySize * 0.9) / 2,
-      spos.y - sEnemySize / 2 - hpBarHeight,
-      sEnemySize * 0.9 * hpFrac,
-      hpBarHeight
+      spos.x - hpBar.width / 2,
+      spos.y - sEnemySize / 2 - hpBar.height - hpBar.yoffset,
+      hpBar.width * hpFrac,
+      hpBar.height
     );
 
     slash.draw(gameState, `enemy_${i}`);

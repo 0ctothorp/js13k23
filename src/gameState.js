@@ -1,6 +1,8 @@
 import { Camera } from "./camera.js";
 import { ENEMY_SPRITE_SIZE } from "./consts.js";
 import { EnemiesData } from "./enemies/enemies.js";
+import { PlayerData } from "./player.js";
+import { TowerData } from "./tower.js";
 import { Collider, Vec2 } from "./utils.js";
 
 /** @typedef {{size: Vec2; data: HTMLImageElement}} Sprite */
@@ -17,9 +19,14 @@ const enemySprite = document.querySelector("#sprite-enemy");
  */
 export function getGameState(canvas) {
   return {
+    meta: {
+      /** @type {'game' | 'main-menu' | 'pause' | 'defeat'} */
+      stage: "game",
+    },
     time: {
       delta: 0,
       currentFrameTime: 0,
+      startTime: -1,
     },
     input: {
       currentlyPressed: new Set(),
@@ -101,10 +108,10 @@ export function getGameState(canvas) {
         /** @type {{pos: Vec2; direction: Vec2[]; active: boolean}[]} */
         positions: [],
       },
+      tower: new TowerData(),
+      player: new PlayerData(),
     },
-    colliders: {
-      ["tower-down"]: new Collider(-16, 0, 32, 24),
-    },
+    colliders: new Map([["tower-down", new Collider(-16, 0, 32, 24)]]),
     triggers: {
       "upper-tower": {
         collider: new Collider(-16, 24, 32, 24),

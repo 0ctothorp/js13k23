@@ -12,3 +12,5 @@ export const PLAYER_SPEED = 0.06;
 
 export const ATTACK_ANIM_DURATION = 200;
 export const ATTACK_OFFSET_FROM_ENTITY = 10;
+export const ENEMY_ATTACK_TIMEOUT = 500;
+export const ENEMY_ATTACK_DELAY = 100;

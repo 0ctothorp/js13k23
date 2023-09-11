@@ -33,5 +33,5 @@ export function isColliding(newPos, oldPos, collider) {
   const collidesx = checkAxisAlignedRectanglesCollision(collider, colliderx);
   const collidesy = checkAxisAlignedRectanglesCollision(collider, collidery);
 
-  return new Vec2(collidesx, collidesy);
+  return { x: collidesx, y: collidesy };
 }

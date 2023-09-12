@@ -21,6 +21,10 @@ export class TowerData {
     this.hp = Math.max(0, this.hp - x);
   }
 
+  increaseHP(x) {
+    this.hp = Math.min(this.hp + x, 100);
+  }
+
   isDead() {
     return this.hp === 0;
   }
@@ -55,7 +59,7 @@ function towerTriggerCollisions(gameState) {
  * @param {import("./gameState").GameState} gameState
  */
 function checkProjectileCollisions(gameState) {
-  const { projectiles, enemies } = gameState.entities;
+  const { projectiles, enemies, tower } = gameState.entities;
 
   const projCollider = new Collider(NaN, NaN, PROJECTILE_HIT_BOX_SIZE, PROJECTILE_HIT_BOX_SIZE);
   const enemyCollider = new Collider(NaN, NaN, ENEMY_SPRITE_SIZE, ENEMY_SPRITE_SIZE);
@@ -72,7 +76,7 @@ function checkProjectileCollisions(gameState) {
 
       if (!areColliding) continue;
 
-      enemies.hps.set(`enemy_${i}`, hp - TOWER_PROJECTILE_DAMAGE);
+      enemies.hps.set(`enemy_${i}`, hp - TOWER_PROJECTILE_DAMAGE * (tower.hp / 100));
       projectile.active = false;
     }
   }

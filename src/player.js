@@ -1,13 +1,19 @@
 import { checkAxisAlignedRectanglesCollision } from "./collisions.js";
-import { PLAYER_SPEED } from "./consts.js";
+import { PLAYER_AUTOHEAL_TIMEOUT, PLAYER_HEAL_INTERVAL, PLAYER_SPEED } from "./consts.js";
 import slash from "./slash.js";
 import { Collider, Vec2 } from "./utils.js";
 
 export class PlayerData {
   hp = 100;
+  lastAttackedAt = 0;
+  lastHealAt = 0;
 
   decreaseHp(x) {
     this.hp = Math.max(this.hp - x, 0);
+  }
+
+  increaseHp(x) {
+    this.hp = Math.min(this.hp + x, 100);
   }
 
   isDead() {
@@ -84,8 +90,17 @@ function update(gameState) {
   const {
     input: { mousedown, mouse },
     rendering: { camera },
-    entities: { positions },
+    entities: { positions, player },
+    time: { currentFrameTime },
   } = gameState;
+
+  if (
+    currentFrameTime - player.lastAttackedAt >= PLAYER_AUTOHEAL_TIMEOUT &&
+    player.lastHealAt + PLAYER_HEAL_INTERVAL <= currentFrameTime
+  ) {
+    player.increaseHp(2);
+    player.lastHealAt = currentFrameTime;
+  }
 
   movement(gameState);
 

@@ -13,10 +13,10 @@ class EnemiesData {
   poolSize = 0;
   /** key is a time in ms after which the spawn should be instantiated */
   futureSpawns = {
-    10000: new Vec2(0, -110),
-    20000: new Vec2(0, 110),
-    30000: new Vec2(110, 0),
-    40000: new Vec2(-110, 0),
+    15000: new Vec2(0, -110),
+    30000: new Vec2(0, 110),
+    45000: new Vec2(110, 0),
+    60000: new Vec2(-110, 0),
   };
 
   /**
@@ -103,6 +103,7 @@ function isDeadByPlayersAttack(gameState, enemyPos, enemyIndex) {
       performingAttack,
       sprites,
       enemies: { hps },
+      tower,
     },
     time: { currentFrameTime, delta },
   } = gameState;
@@ -110,7 +111,7 @@ function isDeadByPlayersAttack(gameState, enemyPos, enemyIndex) {
   const key = `enemy_${enemyIndex}`;
   const hp = hps.get(key);
   const slashSprite = sprites.get("slash");
-  const enemySprite = sprites.get("enemy_");
+  const enemySprite = sprites.get("enemy-1_");
   const playerSlash = performingAttack.get("player");
   if (playerSlash && playerSlash.startedAt >= currentFrameTime - delta && !playerSlash.dmgProcessed) {
     const slashPos = playerSlash.position;
@@ -124,7 +125,10 @@ function isDeadByPlayersAttack(gameState, enemyPos, enemyIndex) {
       playerSlash.dmgProcessed = true;
       const newhp = hp - 20;
       hps.set(key, newhp);
-      if (newhp <= 0) return true;
+      if (newhp <= 0) {
+        tower.increaseHP(3 + Math.floor(Math.random() * 5));
+        return true;
+      }
     }
   }
   return false;
@@ -163,7 +167,7 @@ function update(gameState) {
       tower,
       player,
     },
-    time: { delta },
+    time: { delta, currentFrameTime },
   } = gameState;
 
   instantiateNewSpawns(gameState);
@@ -194,7 +198,10 @@ function update(gameState) {
     );
 
     if (collidingWithPlayer.x || collidingWithPlayer.y) {
-      if (attack(gameState, i, "player")) player.decreaseHp(4);
+      if (attack(gameState, i, "player")) {
+        player.decreaseHp(4);
+        player.lastAttackedAt = currentFrameTime;
+      }
     }
 
     set(gameState.entities, `${key}.target`, target);
@@ -232,6 +239,9 @@ function update(gameState) {
  * @param {GameState} gameState
  */
 function draw(gameState) {
+  const {
+    time: { currentFrameTime },
+  } = gameState;
   const { enemies, positions } = gameState.entities;
   const { hps, poolSize } = enemies;
   const { camera, ctx } = gameState.rendering;
@@ -246,7 +256,20 @@ function draw(gameState) {
     const position = positions.get(key);
     const sposition = camera.worldToScreen(position);
 
-    const sprite = getSprite("enemy_", gameState);
+    const sprites = [getSprite("enemy-1_", gameState), getSprite("enemy-2_", gameState)];
+    if (enemies[`enemy_${i}`]?.lastSpriteSwitchAt === undefined) {
+      set(enemies, `enemy_${i}.lastSpriteSwitchAt`, currentFrameTime);
+    }
+
+    if (
+      enemies[`enemy_${i}`]?.lastSpriteSwitchAt &&
+      currentFrameTime - enemies[`enemy_${i}`]?.lastSpriteSwitchAt >= 200
+    ) {
+      set(enemies, `enemy_${i}.lastSpriteSwitchAt`, currentFrameTime);
+      set(enemies, `enemy_${i}.currentSpriteIndex`, ((enemies[`enemy_${i}`]?.currentSpriteIndex || 0) + 1) % 2);
+    }
+    const sprite = sprites[enemies[`enemy_${i}`]?.currentSpriteIndex || 0];
+
     const dir = position.direction(gameState.entities[key]?.target || new Vec2(0, 0));
     ctx.save();
     ctx.translate(sposition.x, sposition.y);

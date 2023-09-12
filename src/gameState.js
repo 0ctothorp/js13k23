@@ -12,7 +12,7 @@ const wallSprite = document.querySelector("#sprite-wall");
 /** @type {HTMLImageElement} */
 const knightSprite = document.querySelector("#sprite-knight");
 /** @type {HTMLImageElement} */
-const enemySprite = document.querySelector("#sprite-enemy");
+const enemySprite = document.querySelector("#sprite-enemy-1");
 
 /**
  * @param {HTMLCanvasElement} canvas
@@ -68,9 +68,16 @@ export function getGameState(canvas) {
           },
         ],
         [
-          "enemy_",
+          "enemy-1_",
           {
             data: enemySprite,
+            size: new Vec2(ENEMY_SPRITE_SIZE, ENEMY_SPRITE_SIZE),
+          },
+        ],
+        [
+          "enemy-2_",
+          {
+            data: document.querySelector("#sprite-enemy-2"),
             size: new Vec2(ENEMY_SPRITE_SIZE, ENEMY_SPRITE_SIZE),
           },
         ],

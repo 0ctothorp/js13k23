@@ -1,4 +1,4 @@
-import { debounce, Vec2 } from "./utils.js";
+import { Collider, debounce, Vec2 } from "./utils.js";
 import { WALL_SPRITE_WIDTH_PX } from "./consts.js";
 import Enemies from "./enemies/enemies.js";
 import EnemySpawns from "./enemies/enemySpawns.js";
@@ -91,11 +91,6 @@ function attachEventListeners(gameState) {
   const { canvas } = rendering;
   const { mouse, clicks } = input;
 
-  window.onresize = debounce(() => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  });
-
   window.onkeydown = (event) => {
     keyboardInput(gameState, event.code, true);
   };
@@ -181,8 +176,9 @@ function setup(gameState) {
   document.body.dataset.stage = "game";
 
   const {
-    rendering: { ctx },
+    rendering: { ctx, canvas, camera },
     entities: { enemies, player },
+    colliders,
   } = gameState;
 
   ctx.imageSmoothingEnabled = false;
@@ -190,6 +186,14 @@ function setup(gameState) {
   enemies.spawns.forEach((s) => {
     s.active = true;
   });
+
+  const topStopPos = camera.screenToWorld(new Vec2(0, 0));
+  const rightStopPos = camera.screenToWorld(new Vec2(canvas.width, 0));
+  const bottomStopPos = camera.screenToWorld(new Vec2(0, canvas.height));
+  colliders.set("top-stop", new Collider(topStopPos.x, topStopPos.y + 10, canvas.width / camera.zoom, 10));
+  colliders.set("right-stop", new Collider(rightStopPos.x, rightStopPos.y, 10, canvas.height / camera.zoom));
+  colliders.set("botttom-stop", new Collider(bottomStopPos.x, bottomStopPos.y, canvas.width / camera.zoom, 10));
+  colliders.set("left-stop", new Collider(topStopPos.x - 10, topStopPos.y, 10, canvas.height / camera.zoom));
 
   // const observeEnemiesPool = debug.getOserveEnemyPool(gameState);
 
@@ -213,23 +217,6 @@ function setup(gameState) {
 
     // debug
     // observeEnemiesPool();
-
-    // debug
-    // {
-    //   const {
-    //     rendering: { ctx, camera },
-    //     entities: { tower },
-    //     triggers,
-    //   } = gameState;
-
-    //   const col = triggers["upper-tower"].collider;
-    //   const towerScr = camera.worldToScreen({
-    //     x: col.pos.x,
-    //     y: col.pos.y,
-    //   });
-    //   ctx.strokeStyle = "red";
-    //   ctx.strokeRect(towerScr.x, towerScr.y, col.size.x * camera.zoom, col.size.y * camera.zoom);
-    // }
 
     requestAnimationFrame(gameLoop);
   };

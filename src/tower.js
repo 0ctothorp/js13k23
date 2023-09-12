@@ -143,14 +143,17 @@ function getRandomizedProjectileInterval() {
  * @param {import("./gameState").GameState} gameState
  */
 function update(gameState) {
-  const { projectiles } = gameState.entities;
+  const { projectiles, tower } = gameState.entities;
 
-  if (!projectiles.lastShotAt) {
+  if (!projectiles.lastShotAt && !tower.isDead()) {
     shootTowerProjectile(gameState);
     return;
   }
 
-  if (gameState.time.currentFrameTime - projectiles.lastShotAt >= getRandomizedProjectileInterval()) {
+  if (
+    gameState.time.currentFrameTime - projectiles.lastShotAt >= getRandomizedProjectileInterval() &&
+    !tower.isDead()
+  ) {
     shootTowerProjectile(gameState);
   }
 

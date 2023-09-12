@@ -65,20 +65,12 @@ function movement(gameState) {
   const playerSpriteSize = sprites.get("player").size;
   const psizeHalf = playerSpriteSize.x / 2;
 
-  // const colliders = [...positions.entries()]
-  //   .filter(([k]) => k.startsWith("wall_"))
-  //   .map(([, v]) => new Collider(v.x, v.y, wallSpriteSize.x, wallSpriteSize.y));
-  const colliders = [gameState.colliders.get("tower-down")];
-
-  const pcollider = new Collider(tmpx - psizeHalf, posCenter.y + psizeHalf, playerSpriteSize.x, playerSpriteSize.y);
+  const colliders = gameState.colliders.values();
+  const pcolliderx = new Collider(tmpx - psizeHalf, posCenter.y + psizeHalf, playerSpriteSize.x, playerSpriteSize.y);
+  const pcollidery = new Collider(posCenter.x - psizeHalf, tmpy + psizeHalf, playerSpriteSize.x, playerSpriteSize.y);
   for (const collider of colliders) {
-    isCollidingx ||= checkAxisAlignedRectanglesCollision(collider, pcollider);
-
-    pcollider.pos.x = posCenter.x - psizeHalf;
-    pcollider.pos.y = tmpy + psizeHalf;
-    isCollidingy ||= checkAxisAlignedRectanglesCollision(collider, pcollider);
-
-    if (isCollidingx && isCollidingy) break;
+    isCollidingx ||= checkAxisAlignedRectanglesCollision(collider, pcolliderx);
+    isCollidingy ||= checkAxisAlignedRectanglesCollision(collider, pcollidery);
   }
 
   if (!isCollidingx) posCenter.x += x;

@@ -46,11 +46,14 @@ function updatePositionAfterCollision(oldPosRef, newPos, collision) {
  */
 function getChosenTarget(gameState, position) {
   const {
-    entities: { positions },
+    entities: { positions, tower },
   } = gameState;
 
   let target = new Vec2(0, 0);
   const playerPos = positions.get("player");
+
+  if (tower.isDead()) return playerPos;
+
   const playerDist = vecLen(vecSub(playerPos, position));
 
   if (playerDist < 50) target = playerPos;
@@ -168,7 +171,7 @@ function update(gameState) {
 
     const colliding = isCollidingWithTower(gameState, newPos, enemyPos);
     if (colliding.x || colliding.y) {
-      if (attack(gameState, i, "tower-down")) tower.decreaseHP(1);
+      if (!tower.isDead() && attack(gameState, i, "tower-down")) tower.decreaseHP(1);
     }
 
     colliding.x = collidingWithPlayer.x || colliding.x;

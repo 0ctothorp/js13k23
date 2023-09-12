@@ -1,12 +1,27 @@
 import { WALL_SPRITE_WIDTH_PX } from "./consts.js";
+import { debounce } from "./utils.js";
 
 export class Camera {
   constructor(canvas, zoom = 4) {
     this.canvas = canvas;
+
+    this.calculateZoom();
+
+    window.onresize = debounce(() => {
+      this.canvas.width = window.innerWidth;
+      this.canvas.height = window.innerHeight;
+      this.calculateZoom();
+    });
+
     /** How many pixels is a one unit */
-    this.zoom = zoom;
+    // this.zoom = 2;
     /** position of the camera in world units */
     this.position = { x: 0, y: 0 };
+  }
+
+  calculateZoom() {
+    const smallerDimension = Math.min(this.canvas.width, this.canvas.height);
+    this.zoom = Math.floor(smallerDimension / 200);
   }
 
   get gridCellSize() {

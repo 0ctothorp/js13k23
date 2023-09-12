@@ -135,7 +135,20 @@ function isDeadByPlayersAttack(gameState, enemyPos, enemyIndex) {
  * @param {GameState} gameState
  */
 function instantiateNewSpawns(gameState) {
-  const {} = gameState;
+  const {
+    entities: {
+      enemies: { futureSpawns, spawns },
+    },
+    time: { currentFrameTime, startTime },
+  } = gameState;
+
+  for (const [time, pos] of Object.entries(futureSpawns)) {
+    if (currentFrameTime - startTime >= Number(time)) {
+      const len = spawns.push(new EnemySpawnData(pos.x, pos.y));
+      spawns[len - 1].active = true;
+      delete futureSpawns[time];
+    }
+  }
 }
 
 /**
@@ -237,7 +250,7 @@ function draw(gameState) {
     const dir = position.direction(gameState.entities[key]?.target || new Vec2(0, 0));
     ctx.save();
     ctx.translate(sposition.x, sposition.y);
-    ctx.scale(Math.sign(dir.x), 1);
+    ctx.scale(Math.sign(dir.x) || 1, 1);
     ctx.drawImage(
       sprite.data,
       0,

@@ -29,7 +29,7 @@ function getPlayerCollider(gameState) {
     entities: { positions, sprites },
   } = gameState;
   const pos = positions.get("player");
-  const sprite = sprites.get("player");
+  const sprite = sprites.get("player-1");
   return new Collider(pos.x, pos.y, sprite.size.x, sprite.size.y);
 }
 
@@ -37,16 +37,29 @@ function getPlayerCollider(gameState) {
  * @param {import("./gameState").GameState} gameState
  */
 function movement(gameState) {
-  const { input, entities, time } = gameState;
-  const { positions, sprites, directions } = entities;
+  const {
+    input,
+    entities,
+    time: { delta, currentFrameTime },
+  } = gameState;
+  const { positions, sprites, directions, player } = entities;
   const { currentlyPressed: keyboard } = input;
   let xaxis = keyboard.has("KeyA") ? -1 : keyboard.has("KeyD") ? 1 : 0;
   let yaxis = keyboard.has("KeyW") ? 1 : keyboard.has("KeyS") ? -1 : 0;
 
   if (!xaxis && !yaxis) return;
 
-  let x = xaxis * PLAYER_SPEED * time.delta,
-    y = yaxis * PLAYER_SPEED * time.delta;
+  if (player.lastSpriteSwitchAt === undefined) {
+    player.lastSpriteSwitchAt = currentFrameTime;
+  }
+
+  if (player.lastSpriteSwitchAt && currentFrameTime - player.lastSpriteSwitchAt >= 200) {
+    player.lastSpriteSwitchAt = currentFrameTime;
+    player.currentSpriteIndex = ((player.currentSpriteIndex || 0) + 1) % 2;
+  }
+
+  let x = xaxis * PLAYER_SPEED * delta,
+    y = yaxis * PLAYER_SPEED * delta;
 
   if (x && y) {
     x /= 1.41;
@@ -68,7 +81,7 @@ function movement(gameState) {
 
   // const wallSpriteSize = sprites.get("wall_").size;
   /** @type {Vec2} */
-  const playerSpriteSize = sprites.get("player").size;
+  const playerSpriteSize = sprites.get("player-1").size;
   const psizeHalf = playerSpriteSize.x / 2;
 
   const colliders = gameState.colliders.values();
@@ -98,7 +111,7 @@ function update(gameState) {
     currentFrameTime - player.lastAttackedAt >= PLAYER_AUTOHEAL_TIMEOUT &&
     player.lastHealAt + PLAYER_HEAL_INTERVAL <= currentFrameTime
   ) {
-    player.increaseHp(2);
+    player.increaseHp(3);
     player.lastHealAt = currentFrameTime;
   }
 
@@ -120,11 +133,16 @@ function draw(gameState) {
     entities: { sprites, positions, player },
     input: { mouse },
     rendering: { ctx, camera },
+    time: { currentFrameTime },
   } = gameState;
 
   const unit = camera.zoom;
 
-  const sprite = sprites.get("player");
+  const playerSprites = [sprites.get("player-1"), sprites.get("player-2")];
+
+  const sprite = playerSprites[player.currentSpriteIndex || 0];
+
+  // const sprite = sprites.get("player-1");
   const wmouse = camera.screenToWorld(mouse);
   const playerPos = positions.get("player");
   const splayerPos = camera.worldToScreen(playerPos);

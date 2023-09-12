@@ -36,7 +36,7 @@ export class TowerData {
 function towerTriggerCollisions(gameState) {
   const { triggers, entities } = gameState;
   const trigger = triggers["upper-tower"];
-  const playerSpriteSize = entities.sprites.get("player").size;
+  const playerSpriteSize = entities.sprites.get("player-1").size;
   const posCenter = entities.positions.get("player");
   const colSize = playerSpriteSize.x / gameState.rendering.camera.zoom;
   const playerCol = changeColliderAnchorToTopLeft(new Collider(posCenter.x, posCenter.y, colSize, colSize));

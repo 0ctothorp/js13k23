@@ -173,13 +173,15 @@ function draw(gameState) {
  */
 function setup(gameState) {
   attachEventListeners(gameState);
-  document.body.dataset.stage = "game";
 
   const {
     rendering: { ctx, canvas, camera },
     entities: { enemies, player },
     colliders,
   } = gameState;
+
+  document.body.dataset.stage = "game";
+  gameState.meta.stage = "game";
 
   ctx.imageSmoothingEnabled = false;
 
@@ -201,6 +203,7 @@ function setup(gameState) {
     setTime(gameState, frameTime);
 
     if (gameState.meta.stage === "defeat") return;
+    if (gameState.meta.stage === "main-menu") return;
 
     if (player.isDead()) {
       gameState.meta.stage = "defeat";
@@ -231,4 +234,4 @@ window.startGame = function startGame() {
   requestAnimationFrame(gameLoop);
 };
 
-startGame();
+// startGame();

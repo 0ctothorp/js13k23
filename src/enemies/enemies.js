@@ -13,10 +13,10 @@ class EnemiesData {
   poolSize = 0;
   /** key is a time in ms after which the spawn should be instantiated */
   futureSpawns = {
-    15000: new Vec2(0, -110),
-    30000: new Vec2(0, 110),
-    45000: new Vec2(110, 0),
-    60000: new Vec2(-110, 0),
+    20000: new Vec2(0, -110),
+    50000: new Vec2(0, 110),
+    90000: new Vec2(110, 0),
+    140000: new Vec2(-110, 0),
   };
 
   /**
@@ -126,7 +126,7 @@ function isDeadByPlayersAttack(gameState, enemyPos, enemyIndex) {
       const newhp = hp - 20;
       hps.set(key, newhp);
       if (newhp <= 0) {
-        tower.increaseHP(3 + Math.floor(Math.random() * 5));
+        tower.increaseHP(5 + Math.floor(Math.random() * 6));
         return true;
       }
     }
@@ -173,7 +173,7 @@ function update(gameState) {
   instantiateNewSpawns(gameState);
 
   const playerPos = positions.get("player");
-  const playerSprite = sprites.get("player");
+  const playerSprite = sprites.get("player-1");
 
   // Iterating through all enemies instead of alive ones, because I need to know the indices.
   // I mght store the indices in the getAliveItems returned object.

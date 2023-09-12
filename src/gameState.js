@@ -10,7 +10,7 @@ import { Collider, Vec2 } from "./utils.js";
 /** @type {HTMLImageElement} */
 const wallSprite = document.querySelector("#sprite-wall");
 /** @type {HTMLImageElement} */
-const knightSprite = document.querySelector("#sprite-knight");
+const knightSprite = document.querySelector("#sprite-knight-1");
 /** @type {HTMLImageElement} */
 const enemySprite = document.querySelector("#sprite-enemy-1");
 
@@ -21,7 +21,7 @@ export function getGameState(canvas) {
   return {
     meta: {
       /** @type {'game' | 'main-menu' | 'pause' | 'defeat'} */
-      stage: "game",
+      stage: "main-menu",
     },
     time: {
       delta: 0,
@@ -96,9 +96,16 @@ export function getGameState(canvas) {
           },
         ],
         [
-          "player",
+          "player-1",
           {
             data: knightSprite,
+            size: new Vec2(ENEMY_SPRITE_SIZE, ENEMY_SPRITE_SIZE),
+          },
+        ],
+        [
+          "player-2",
+          {
+            data: document.querySelector("#sprite-knight-2"),
             size: new Vec2(ENEMY_SPRITE_SIZE, ENEMY_SPRITE_SIZE),
           },
         ],

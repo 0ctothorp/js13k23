@@ -24,7 +24,6 @@ function update(gameState) {
  */
 function slash(gameState, entity, direction) {
   const {
-    input: { mouse },
     entities: { positions, performingAttack },
     time: { currentFrameTime },
   } = gameState;

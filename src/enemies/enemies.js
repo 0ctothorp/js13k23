@@ -11,6 +11,13 @@ class EnemiesData {
   /** @type {Map<string,number>} */
   hps = new Map();
   poolSize = 0;
+  /** key is a time in ms after which the spawn should be instantiated */
+  futureSpawns = {
+    10000: new Vec2(0, -110),
+    20000: new Vec2(0, 110),
+    30000: new Vec2(110, 0),
+    40000: new Vec2(-110, 0),
+  };
 
   /**
    * @param {{ spawns: Vec2[]}} params
@@ -124,6 +131,14 @@ function isDeadByPlayersAttack(gameState, enemyPos, enemyIndex) {
 }
 
 /**
+ *
+ * @param {GameState} gameState
+ */
+function instantiateNewSpawns(gameState) {
+  const {} = gameState;
+}
+
+/**
  * @param {GameState} gameState
  */
 function update(gameState) {
@@ -137,6 +152,8 @@ function update(gameState) {
     },
     time: { delta },
   } = gameState;
+
+  instantiateNewSpawns(gameState);
 
   const playerPos = positions.get("player");
   const playerSprite = sprites.get("player");

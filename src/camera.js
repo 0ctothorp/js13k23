@@ -1,5 +1,5 @@
 import { WALL_SPRITE_WIDTH_PX } from "./consts.js";
-import { debounce } from "./utils.js";
+import { Vec2, debounce } from "./utils.js";
 
 export class Camera {
   constructor(canvas, zoom = 4) {
@@ -29,10 +29,10 @@ export class Camera {
   }
 
   worldToScreen({ x, y }) {
-    const screenCoords = {
-      x: Math.ceil(x * this.zoom + this.canvas.width / 2),
-      y: Math.ceil(-y * this.zoom + this.canvas.height / 2),
-    };
+    const screenCoords = new Vec2(
+      Math.ceil(x * this.zoom + this.canvas.width / 2),
+      Math.ceil(-y * this.zoom + this.canvas.height / 2)
+    );
     return screenCoords;
   }
 

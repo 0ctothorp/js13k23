@@ -116,10 +116,17 @@ export function getGameState(canvas) {
             size: new Vec2(ENEMY_SPRITE_SIZE, ENEMY_SPRITE_SIZE),
           },
         ],
+        [
+          "arrow",
+          {
+            data: document.querySelector("#sprite-arrow"),
+            size: new Vec2(12, 12),
+          },
+        ],
       ]),
       projectiles: {
         lastShotAt: null,
-        /** @type {{pos: Vec2; direction: Vec2[]; active: boolean}[]} */
+        /** @type {{pos: Vec2; direction: Vec2; active: boolean}[]} */
         positions: [],
       },
       tower: new TowerData(),

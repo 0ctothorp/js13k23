@@ -1,4 +1,13 @@
-import { Collider, changeColliderAnchorToTopLeft, moveAlongDirection, set, vecLen, vecSub } from "./utils.js";
+import {
+  Collider,
+  Vec2,
+  angleBetweenVectors,
+  changeColliderAnchorToTopLeft,
+  moveAlongDirection,
+  set,
+  vecLen,
+  vecSub,
+} from "./utils.js";
 import Enemies from "./enemies/enemies.js";
 import {
   ENEMY_SPRITE_SIZE,
@@ -8,7 +17,7 @@ import {
   TOWER_PROJECTILE_SPEED,
 } from "./consts.js";
 import { checkAxisAlignedRectanglesCollision } from "./collisions.js";
-import { drawSprite } from "./sprites.js";
+import { drawRawSprite, drawSprite } from "./sprites.js";
 
 export class TowerData {
   // I could move tower projectiles data into here
@@ -118,7 +127,7 @@ function shootTowerProjectile(gameState) {
     projectiles.positions.push({
       active: true,
       pos: { x: 0, y: 0 },
-      direction: { x: closestEnemy.p.x, y: closestEnemy.p.y },
+      direction: new Vec2(closestEnemy.p.x, closestEnemy.p.y),
     });
   }
 }
@@ -167,6 +176,8 @@ function update(gameState) {
 }
 
 const PROJECTILE_HIT_BOX_SIZE = 2;
+const RIGHT_VEC = new Vec2(0.5, 0.5).normalize();
+console.log(RIGHT_VEC);
 
 /**
  * @param {import("./gameState").GameState} gameState
@@ -197,20 +208,20 @@ function draw(gameState) {
     drawSprite(towerUp.sprite, towerUp.pos, gameState);
   }
 
-  ctx.fillStyle = "yellow";
-
-  const wsize = PROJECTILE_HIT_BOX_SIZE;
-  const ssize = wsize * camera.zoom;
-
   const onlyActive = projectilePositions.filter((x) => x.active);
+  const arrowSprite = sprites.get("arrow");
 
   for (const p of onlyActive) {
-    const spos = camera.worldToScreen(p.pos);
-
-    // TODO: draw an arrow sprite
-    ctx.beginPath();
-    ctx.ellipse(spos.x + wsize / 2, spos.y + wsize / 2, ssize, ssize, 0, 0, 2 * Math.PI);
-    ctx.fill();
+    const spos = camera.worldToScreen(new Vec2(p.pos.x, p.pos.y));
+    let angle = angleBetweenVectors(RIGHT_VEC.clone(), p.direction);
+    if (p.direction.y > 0) {
+      angle = 2 * Math.PI - angle;
+    }
+    ctx.save();
+    ctx?.translate(spos.x, spos.y);
+    ctx?.rotate(angle);
+    drawRawSprite(gameState, arrowSprite);
+    ctx.restore();
   }
 
   const screenTowerUp = camera.worldToScreen(towerUp.pos);

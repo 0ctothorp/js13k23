@@ -1,3 +1,5 @@
+import { Vec2 } from "./utils.js";
+
 export function getSprite(name, gameState) {
   const { sprites } = gameState.entities;
   let sprite = sprites.get(name);
@@ -32,6 +34,32 @@ export function drawSprite(sprite, position, gameState) {
     sprite.data.naturalHeight,
     x,
     y,
+    sprite.size.x * unit,
+    sprite.size.y * unit
+  );
+}
+
+/**
+ *
+ * @param {import("./gameState").GameState} gameState
+ * @param {import("./gameState").Sprite} sprite
+ * @param {Vec2} position
+ */
+export function drawRawSprite(gameState, sprite, position = new Vec2(0, 0)) {
+  const {
+    rendering: { ctx, camera },
+  } = gameState;
+
+  const unit = camera.zoom;
+
+  ctx.drawImage(
+    sprite.data,
+    0,
+    0,
+    sprite.data.naturalWidth,
+    sprite.data.naturalHeight,
+    position.x,
+    position.y,
     sprite.size.x * unit,
     sprite.size.y * unit
   );

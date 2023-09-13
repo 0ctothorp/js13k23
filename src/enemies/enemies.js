@@ -104,6 +104,7 @@ function isDeadByPlayersAttack(gameState, enemyPos, enemyIndex) {
       sprites,
       enemies: { hps },
       tower,
+      player,
     },
     time: { currentFrameTime, delta },
   } = gameState;
@@ -127,6 +128,7 @@ function isDeadByPlayersAttack(gameState, enemyPos, enemyIndex) {
       hps.set(key, newhp);
       if (newhp <= 0) {
         tower.increaseHP(5 + Math.floor(Math.random() * 6));
+        player.killed += 1;
         return true;
       }
     }
@@ -185,6 +187,7 @@ function update(gameState) {
 
     const target = getChosenTarget(gameState, enemyPos);
     let newPos = enemyPos.clone();
+    const speed = tower.isDead() ? ENEMY_MOVEMENT_SPEED * 1.4 : ENEMY_MOVEMENT_SPEED;
     moveTowards(newPos, target, ENEMY_MOVEMENT_SPEED * delta);
 
     if (isDeadByPlayersAttack(gameState, newPos, i)) {

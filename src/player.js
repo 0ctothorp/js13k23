@@ -7,6 +7,7 @@ export class PlayerData {
   hp = 100;
   lastAttackedAt = 0;
   lastHealAt = 0;
+  killed = 0;
 
   decreaseHp(x) {
     this.hp = Math.max(this.hp - x, 0);

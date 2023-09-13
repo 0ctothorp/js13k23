@@ -76,7 +76,7 @@ function checkProjectileCollisions(gameState) {
 
       if (!areColliding) continue;
 
-      enemies.hps.set(`enemy_${i}`, hp - TOWER_PROJECTILE_DAMAGE * (tower.hp / 100));
+      enemies.hps.set(`enemy_${i}`, hp - TOWER_PROJECTILE_DAMAGE * Math.max(tower.hp / 100, 0.6));
       projectile.active = false;
     }
   }

@@ -17,6 +17,7 @@ function getFormattedDuration(durationMs) {
 export function showDefeat(gameState) {
   const {
     time: { currentFrameTime, startTime },
+    entities: { player },
   } = gameState;
 
   document.body.dataset.stage = "defeat";
@@ -25,14 +26,20 @@ export function showDefeat(gameState) {
   let durationStr = getFormattedDuration(durationMs);
 
   document.querySelector("#duration").innerHTML = durationStr;
+  document.querySelector("#killed").innerHTML = player.killed;
 
-  const bestEffort = localStorage.getItem(`0ctothorp.js13k23.bestDurationMs`) || "0";
-  if (Math.floor(durationMs) > Number(bestEffort)) {
+  const bestEffortTime = localStorage.getItem(`0ctothorp.js13k23.bestDurationMs`) || "0";
+  const bestEffortKills = localStorage.getItem(`0ctothorp.js13k23.bestKills`) || "0";
+  if (Math.floor(durationMs) > Number(bestEffortTime)) {
     localStorage.setItem(`0ctothorp.js13k23.bestDurationMs`, durationMs.toFixed());
   }
+  if (player.killed > Number(bestEffortKills)) {
+    localStorage.setItem(`0ctothorp.js13k23.bestKills`, player.killed.toFixed());
+  }
 
-  if (Number(bestEffort) > 0) {
+  if (Number(bestEffortTime) > 0) {
     document.querySelector("#best-effort-p").classList.remove("dispnone");
-    document.querySelector("#best-effort-v").innerHTML = getFormattedDuration(Number(bestEffort));
+    document.querySelector("#best-effort-v").innerHTML = getFormattedDuration(Number(bestEffortTime));
+    document.querySelector("#best-effort-kills").innerHTML = bestEffortKills;
   }
 }

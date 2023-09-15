@@ -123,6 +123,13 @@ export function getGameState(canvas) {
             size: new Vec2(12, 12),
           },
         ],
+        [
+          "spear",
+          {
+            data: document.querySelector("#sprite-spear"),
+            size: new Vec2(16, 8),
+          },
+        ],
       ]),
       projectiles: {
         lastShotAt: null,

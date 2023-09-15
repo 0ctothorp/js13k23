@@ -1,6 +1,15 @@
-import { ENEMY_ATTACK_TIMEOUT, ENEMY_MOVEMENT_SPEED, ENEMY_SPRITE_SIZE } from "../consts.js";
-import { Collider, Vec2, changeColliderAnchorToTopLeft, moveTowards, set, vecLen, vecSub } from "../utils.js";
-import { getSprite } from "../sprites.js";
+import { ATTACK_ANIM_DURATION, ENEMY_ATTACK_TIMEOUT, ENEMY_MOVEMENT_SPEED, ENEMY_SPRITE_SIZE } from "../consts.js";
+import {
+  Collider,
+  Vec2,
+  angleBetweenVectors,
+  changeColliderAnchorToTopLeft,
+  moveTowards,
+  set,
+  vecLen,
+  vecSub,
+} from "../utils.js";
+import { drawRawSprite, drawSprite, getSprite } from "../sprites.js";
 import { EnemySpawnData } from "./EnemySpawnData.js";
 import { checkAxisAlignedRectanglesCollision, isColliding } from "../collisions.js";
 import slash from "../slash.js";
@@ -245,7 +254,7 @@ function draw(gameState) {
   const {
     time: { currentFrameTime },
   } = gameState;
-  const { enemies, positions } = gameState.entities;
+  const { enemies, positions, sprites, performingAttack } = gameState.entities;
   const { hps, poolSize } = enemies;
   const { camera, ctx } = gameState.rendering;
 
@@ -259,19 +268,16 @@ function draw(gameState) {
     const position = positions.get(key);
     const sposition = camera.worldToScreen(position);
 
-    const sprites = [getSprite("enemy-1_", gameState), getSprite("enemy-2_", gameState)];
-    if (enemies[`enemy_${i}`]?.lastSpriteSwitchAt === undefined) {
+    const frames = [getSprite("enemy-1_", gameState), getSprite("enemy-2_", gameState)];
+    if (enemies[key]?.lastSpriteSwitchAt === undefined) {
       set(enemies, `enemy_${i}.lastSpriteSwitchAt`, currentFrameTime);
     }
 
-    if (
-      enemies[`enemy_${i}`]?.lastSpriteSwitchAt &&
-      currentFrameTime - enemies[`enemy_${i}`]?.lastSpriteSwitchAt >= 200
-    ) {
+    if (enemies[key]?.lastSpriteSwitchAt && currentFrameTime - enemies[key]?.lastSpriteSwitchAt >= 200) {
       set(enemies, `enemy_${i}.lastSpriteSwitchAt`, currentFrameTime);
-      set(enemies, `enemy_${i}.currentSpriteIndex`, ((enemies[`enemy_${i}`]?.currentSpriteIndex || 0) + 1) % 2);
+      set(enemies, `enemy_${i}.currentSpriteIndex`, ((enemies[key]?.currentSpriteIndex || 0) + 1) % 2);
     }
-    const sprite = sprites[enemies[`enemy_${i}`]?.currentSpriteIndex || 0];
+    const sprite = frames[enemies[key]?.currentSpriteIndex || 0];
 
     const dir = position.direction(gameState.entities[key]?.target || new Vec2(0, 0));
     ctx.save();
@@ -289,7 +295,34 @@ function draw(gameState) {
       sprite.size.y * unit
     );
     ctx.restore();
-    // drawSprite(sprite, position, gameState);
+
+    // TODO: animate spear attack
+    const spearSprite = sprites.get("spear");
+    const ongoingAttack = performingAttack.get(key);
+    const SPEAR_ATTACK_OFFSET = 30;
+    ctx.save();
+    if (ongoingAttack) {
+      ctx.translate(
+        sposition.x +
+          (-Math.sign(dir.x) * (SPEAR_ATTACK_OFFSET * (currentFrameTime - ongoingAttack.startedAt))) /
+            ATTACK_ANIM_DURATION,
+        sposition.y
+      );
+
+      ctx.scale(-Math.sign(dir.x) || 1, 1);
+      let angleRad = angleBetweenVectors(new Vec2(1, 0), ongoingAttack.direction);
+      if (ongoingAttack.direction.y > 0) {
+        angleRad = 2 * Math.PI - angleRad;
+      }
+      ctx?.rotate(angleRad);
+    } else {
+      // ctx.scale(-Math.sign(dir.x) || -1, 1);
+      ctx.translate(sposition.x, sposition.y);
+      ctx.scale(-Math.sign(dir.x) || 1, 1);
+    }
+
+    drawRawSprite(gameState, spearSprite, new Vec2(-4 * camera.zoom, -4 * camera.zoom));
+    ctx?.restore();
 
     const spos = camera.worldToScreen(position);
 

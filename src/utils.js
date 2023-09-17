@@ -17,6 +17,12 @@ export class Vec2 {
     return this;
   }
 
+  mult(v) {
+    this.x *= v.x;
+    this.y *= v.y;
+    return this;
+  }
+
   normalize() {
     const len = vecLen(this);
     this.x /= len;
@@ -30,6 +36,12 @@ export class Vec2 {
   sub(v) {
     this.x -= v.x;
     this.y -= v.y;
+    return this;
+  }
+
+  add(v) {
+    this.x += v.x;
+    this.y += v.y;
     return this;
   }
 

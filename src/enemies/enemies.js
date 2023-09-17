@@ -301,20 +301,25 @@ function draw(gameState) {
     const ongoingAttack = performingAttack.get(key);
     const SPEAR_ATTACK_OFFSET = 30;
     ctx.save();
-    if (ongoingAttack) {
-      ctx.translate(
-        sposition.x +
-          (-Math.sign(dir.x) * (SPEAR_ATTACK_OFFSET * (currentFrameTime - ongoingAttack.startedAt))) /
-            ATTACK_ANIM_DURATION,
-        sposition.y
-      );
 
-      ctx.scale(-Math.sign(dir.x) || 1, 1);
+    if (ongoingAttack) {
+      const progress = (currentFrameTime - ongoingAttack.startedAt) / ATTACK_ANIM_DURATION;
+      // dir.y > 0 ? zmień znak
+      // dir.x < 0 ? zmień znak
+      ctx.translate(sposition.x, sposition.y);
+
+      // ctx.scale(-Math.sign(dir.x) || 1, 1);
+
       let angleRad = angleBetweenVectors(new Vec2(1, 0), ongoingAttack.direction);
+
       if (ongoingAttack.direction.y > 0) {
         angleRad = 2 * Math.PI - angleRad;
       }
-      ctx?.rotate(angleRad);
+      const angle = (angleRad * 180) / Math.PI;
+      console.log(angle);
+      ctx.rotate(angleRad);
+      // The ctx got rotated in the direction pointed by dir vector, so now I only need to translate the ctx along x axis
+      ctx.translate(progress * 20, 0);
     } else {
       // ctx.scale(-Math.sign(dir.x) || -1, 1);
       ctx.translate(sposition.x, sposition.y);
@@ -322,7 +327,7 @@ function draw(gameState) {
     }
 
     drawRawSprite(gameState, spearSprite, new Vec2(-4 * camera.zoom, -4 * camera.zoom));
-    ctx?.restore();
+    ctx.restore();
 
     const spos = camera.worldToScreen(position);
 

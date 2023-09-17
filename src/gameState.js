@@ -59,6 +59,7 @@ export function getGameState(canvas) {
       directions: new Map([["player", new Vec2(0, 0)]]),
       /** @type {Map<string, { startedAt: number; direction: Vec2; position: Vec2 }>} */
       performingAttack: new Map(),
+      /** @type {Map<string, {data: HTMLImageElement; size: Vec2}>} */
       sprites: new Map([
         [
           "wall_",

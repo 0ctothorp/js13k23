@@ -5,6 +5,7 @@ import {
   angleBetweenVectors,
   changeColliderAnchorToTopLeft,
   moveTowards,
+  radToDeg,
   set,
   vecLen,
   vecSub,
@@ -296,34 +297,31 @@ function draw(gameState) {
     );
     ctx.restore();
 
-    // TODO: animate spear attack
     const spearSprite = sprites.get("spear");
     const ongoingAttack = performingAttack.get(key);
     const SPEAR_ATTACK_OFFSET = 30;
     ctx.save();
 
+    ctx.translate(sposition.x, sposition.y);
     if (ongoingAttack) {
       const progress = (currentFrameTime - ongoingAttack.startedAt) / ATTACK_ANIM_DURATION;
-      // dir.y > 0 ? zmień znak
-      // dir.x < 0 ? zmień znak
-      ctx.translate(sposition.x, sposition.y);
-
-      // ctx.scale(-Math.sign(dir.x) || 1, 1);
-
       let angleRad = angleBetweenVectors(new Vec2(1, 0), ongoingAttack.direction);
 
       if (ongoingAttack.direction.y > 0) {
         angleRad = 2 * Math.PI - angleRad;
       }
-      const angle = (angleRad * 180) / Math.PI;
-      console.log(angle);
       ctx.rotate(angleRad);
       // The ctx got rotated in the direction pointed by dir vector, so now I only need to translate the ctx along x axis
       ctx.translate(progress * 20, 0);
     } else {
-      // ctx.scale(-Math.sign(dir.x) || -1, 1);
-      ctx.translate(sposition.x, sposition.y);
-      ctx.scale(-Math.sign(dir.x) || 1, 1);
+      const playerPos = positions.get('player');
+      // TODO: add lookAt to utils
+      const toPlayerPos = playerPos.clone().sub(position)
+      let angleRad = angleBetweenVectors(new Vec2(1, 0), toPlayerPos);
+      if (toPlayerPos.y > 0) {
+        angleRad = 2 * Math.PI - angleRad;
+      }
+      ctx.rotate(angleRad);
     }
 
     drawRawSprite(gameState, spearSprite, new Vec2(-4 * camera.zoom, -4 * camera.zoom));

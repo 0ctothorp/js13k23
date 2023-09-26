@@ -94,15 +94,15 @@ export function debounce(fn, time) {
 }
 
 /**
- * @param {NumVec2} vec
+ * @param {Vec2} vec
  */
 export function vecLen(vec) {
   return Math.sqrt(vec.x * vec.x + vec.y * vec.y);
 }
 
 /**
- * @param {NumVec2} a
- * @param {NumVec2} b
+ * @param {Vec2} a
+ * @param {Vec2} b
  */
 export function vecSub(a, b) {
   return { x: a.x - b.x, y: a.y - b.y };
@@ -114,8 +114,8 @@ export function vecNorm(v) {
 }
 
 /**
- * @param {import("./utils.js").NumVec2} pos - this param is mutated
- * @param {import("./utils.js").NumVec2} target
+ * @param {import("./utils.js").Vec2} pos - this param is mutated
+ * @param {import("./utils.js").Vec2} target
  * @param {number} speed
  */
 export function moveTowards(pos, target, speed) {
@@ -157,4 +157,8 @@ export function set(obj, path, value) {
  */
 export function changeColliderAnchorToTopLeft(c) {
   return new Collider(c.pos.x - c.size.x / 2, c.pos.y + c.size.y / 2, c.size.x, c.size.y, c.isTrigger);
+}
+
+export function radToDeg(rad) {
+  return (rad * 180) / Math.PI;
 }

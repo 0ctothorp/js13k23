@@ -88,7 +88,6 @@ function drawWallBuildingSpot(gameState) {
  */
 function attachEventListeners(gameState) {
   const { input, rendering } = gameState;
-  const { canvas } = rendering;
   const { mouse, clicks } = input;
 
   window.onkeydown = (event) => {

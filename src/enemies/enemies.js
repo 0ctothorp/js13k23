@@ -20,6 +20,7 @@ import slash from "../slash.js";
 class EnemiesData {
   /** @type {Map<string,number>} */
   hps = new Map();
+  /** poolSize is increased as needed and never decreased */
   poolSize = 0;
   /** key is a time in ms after which the spawn should be instantiated */
   futureSpawns = {
@@ -71,7 +72,7 @@ function getChosenTarget(gameState, position) {
 
   if (tower.isDead()) return playerPos;
 
-  const playerDist = vecLen(vecSub(playerPos, position));
+  const playerDist = playerPos.clone().sub(position).length;
 
   if (playerDist < 50) target = playerPos;
   return target;
@@ -172,15 +173,11 @@ function instantiateNewSpawns(gameState) {
  */
 function update(gameState) {
   const {
-    entities: {
-      enemies: { hps: enemiesHps, poolSize },
-      positions,
-      sprites,
-      tower,
-      player,
-    },
+    entities: { enemies, positions, sprites, tower, player },
     time: { delta, currentFrameTime },
   } = gameState;
+
+  const { hps: enemiesHps, poolSize } = enemies;
 
   instantiateNewSpawns(gameState);
 
@@ -188,7 +185,7 @@ function update(gameState) {
   const playerSprite = sprites.get("player-1");
 
   // Iterating through all enemies instead of alive ones, because I need to know the indices.
-  // I mght store the indices in the getAliveItems returned object.
+  // I might store the indices in the getAliveItems returned object.
   for (let i = 0; i < poolSize; i++) {
     const key = `enemy_${i}`;
     const enemyPos = positions.get(key);
@@ -196,9 +193,12 @@ function update(gameState) {
     if (hp <= 0) continue;
 
     const target = getChosenTarget(gameState, enemyPos);
+    console.log(`setting target for ${key}`);
+    set(enemies, `${key}.target`, target);
+
     let newPos = enemyPos.clone();
     const speed = tower.isDead() ? ENEMY_MOVEMENT_SPEED * 1.4 : ENEMY_MOVEMENT_SPEED;
-    moveTowards(newPos, target, ENEMY_MOVEMENT_SPEED * delta);
+    moveTowards(newPos, target, speed * delta);
 
     if (isDeadByPlayersAttack(gameState, newPos, i)) {
       continue;
@@ -271,12 +271,12 @@ function draw(gameState) {
 
     const frames = [getSprite("enemy-1_", gameState), getSprite("enemy-2_", gameState)];
     if (enemies[key]?.lastSpriteSwitchAt === undefined) {
-      set(enemies, `enemy_${i}.lastSpriteSwitchAt`, currentFrameTime);
+      set(enemies, `${key}.lastSpriteSwitchAt`, currentFrameTime);
     }
 
     if (enemies[key]?.lastSpriteSwitchAt && currentFrameTime - enemies[key]?.lastSpriteSwitchAt >= 200) {
-      set(enemies, `enemy_${i}.lastSpriteSwitchAt`, currentFrameTime);
-      set(enemies, `enemy_${i}.currentSpriteIndex`, ((enemies[key]?.currentSpriteIndex || 0) + 1) % 2);
+      set(enemies, `${key}.lastSpriteSwitchAt`, currentFrameTime);
+      set(enemies, `${key}.currentSpriteIndex`, ((enemies[key]?.currentSpriteIndex || 0) + 1) % 2);
     }
     const sprite = frames[enemies[key]?.currentSpriteIndex || 0];
 
@@ -314,11 +314,12 @@ function draw(gameState) {
       // The ctx got rotated in the direction pointed by dir vector, so now I only need to translate the ctx along x axis
       ctx.translate(progress * 20, 0);
     } else {
-      const playerPos = positions.get('player');
+      const target = enemies[key]?.target;
+
       // TODO: add lookAt to utils
-      const toPlayerPos = playerPos.clone().sub(position)
-      let angleRad = angleBetweenVectors(new Vec2(1, 0), toPlayerPos);
-      if (toPlayerPos.y > 0) {
+      const toTarget = target.clone().sub(position);
+      let angleRad = angleBetweenVectors(new Vec2(1, 0), toTarget);
+      if (toTarget.y > 0) {
         angleRad = 2 * Math.PI - angleRad;
       }
       ctx.rotate(angleRad);

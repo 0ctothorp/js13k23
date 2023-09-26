@@ -209,8 +209,8 @@ function setup(gameState) {
       showDefeat(gameState);
     } else {
       Player.update(gameState);
-      Enemies.update(gameState);
       EnemySpawns.update(gameState);
+      Enemies.update(gameState);
       tower.update(gameState);
       slash.update(gameState);
     }
